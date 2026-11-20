@@ -7,29 +7,36 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: var(--tg-theme-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #111111);
-            --hint-color: var(--tg-theme-hint-color, #777777);
-            --button-color: var(--tg-theme-button-color, #2481cc);
-            --button-text: var(--tg-theme-button-text-color, #ffffff);
-            --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            --bg-dark: #0a0a0c;
+            --card-bg: #121216;
+            --border-color: rgba(255, 255, 255, 0.14);
+            --text-main: #f4f4f6;
+            --text-muted: #8e8e98;
+            --accent: #f5b82e;
+            --accent-glow: rgba(245, 184, 46, 0.35);
+            --neon-cyan: #2ef2d8;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'SF Mono', 'Fira Code', 'Roboto Mono', -apple-system, BlinkMacSystemFont, monospace;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 16px;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 36px 36px;
         }
 
         .container {
@@ -40,324 +47,716 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            padding: 16px;
         }
 
-        /* Прогресс-бар */
-        .progress-wrapper {
-            margin-bottom: 20px;
-        }
-        .progress-text {
-            font-size: 13px;
-            color: var(--hint-color);
-            margin-bottom: 6px;
+        .hidden { display: none !important; }
+
+        /* ================= СТАРТОВЫЙ ЭКРАН ================= */
+        #start-screen {
+            flex: 1;
             display: flex;
+            flex-direction: column;
             justify-content: space-between;
-        }
-        .progress-bar-bg {
-            width: 100%;
-            height: 6px;
-            background-color: var(--secondary-bg);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            background-color: var(--button-color);
-            width: 0%;
-            transition: width 0.3s ease;
+            padding: 12px 0 20px;
+            animation: fadeIn 0.5s ease;
         }
 
-        /* Карточка вопроса */
-        .question-card {
-            background-color: var(--secondary-bg);
-            padding: 24px 20px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            min-height: 140px;
+        .start-top-meta {
             display: flex;
             align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .question-text {
-            font-size: 18px;
-            font-weight: 600;
-            line-height: 1.4;
+            gap: 8px;
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 14px;
         }
 
-        /* Кнопки ответов */
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+            animation: pulse 1.8s infinite;
+        }
+
+        .start-title {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .start-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.45;
+            margin-bottom: 24px;
+        }
+
+        /* Бегущие ряды фотографий (Marquee) */
+        .marquee-section {
+            margin: 8px -16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+            transform: rotate(-3deg);
+            padding: 8px 0;
+        }
+
+        .marquee-row {
+            display: flex;
+            width: max-content;
+            gap: 10px;
+        }
+
+        .marquee-row.left {
+            animation: scrollLeft 28s linear infinite;
+        }
+
+        .marquee-row.right {
+            animation: scrollRight 32s linear infinite;
+        }
+
+        .marquee-card {
+            width: 74px;
+            height: 74px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: #1a1a22;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .marquee-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: contrast(1.08) saturate(0.95);
+        }
+
+        .start-btn {
+            width: 100%;
+            padding: 18px 20px;
+            background-color: var(--accent);
+            color: #0a0a0c;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 8px 24px var(--accent-glow);
+            transition: transform 0.15s ease;
+        }
+
+        .start-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* ================= ЭКРАН КВИЗА ================= */
+        #quiz-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            animation: fadeIn 0.35s ease;
+        }
+
+        .quiz-header {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .quiz-app-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        /* Сегментированный прогресс-бар */
+        .segmented-bar {
+            display: grid;
+            grid-template-columns: repeat(27, 1fr);
+            gap: 3px;
+            padding: 5px;
+            border: 1px solid rgba(245, 184, 46, 0.25);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .seg-cell {
+            height: 8px;
+            border-radius: 2px;
+            background-color: rgba(255, 255, 255, 0.08);
+            transition: background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .seg-cell.done {
+            background-color: var(--accent);
+        }
+
+        .seg-cell.active {
+            background-color: #ffe082;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .question-block {
+            margin: 22px 0 24px;
+            min-height: 130px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .q-counter {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+
+        .question-text {
+            font-size: 17px;
+            line-height: 1.5;
+            color: #ffffff;
+            font-weight: 500;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        /* Варианты ответов */
         .answers-list {
             display: flex;
             flex-direction: column;
             gap: 10px;
+            margin-bottom: 18px;
         }
+
         .btn-answer {
             width: 100%;
-            padding: 14px 16px;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 500;
+            padding: 15px 18px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 14px;
+            text-align: left;
             cursor: pointer;
-            transition: transform 0.1s ease, opacity 0.2s;
-            text-align: center;
-        }
-        .btn-answer:active {
-            transform: scale(0.98);
-        }
-
-        .ans-strong-yes { background-color: #2e7d32; color: #fff; }
-        .ans-yes        { background-color: #4caf50; color: #fff; }
-        .ans-neutral    { background-color: var(--secondary-bg); color: var(--text-color); border: 1px solid rgba(128,128,128,0.2); }
-        .ans-no         { background-color: #e53935; color: #fff; }
-        .ans-strong-no  { background-color: #b71c1c; color: #fff; }
-
-        .hidden { display: none !important; }
-
-        /* Экран результата */
-        .result-header {
-            text-align: center;
-            margin-bottom: 12px;
-        }
-        .result-subtitle {
-            font-size: 13px;
-            color: var(--hint-color);
-            margin-bottom: 6px;
-        }
-        .politician-photo-wrapper {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 8px;
-            border-radius: 50%;
+            transition: all 0.22s ease;
+            position: relative;
             overflow: hidden;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-            border: 3px solid var(--button-color);
-            background-color: var(--secondary-bg);
         }
-        .politician-photo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+
+        .btn-answer:active {
+            transform: scale(0.985);
         }
-        .politician-name {
-            font-size: 22px;
-            font-weight: 800;
-            color: var(--button-color);
+
+        .btn-answer.selected {
+            border-color: var(--accent);
+            color: var(--accent);
+            background-color: rgba(245, 184, 46, 0.08);
+            box-shadow: 0 0 14px rgba(245, 184, 46, 0.15);
+        }
+
+        .btn-answer.dimmed {
+            opacity: 0.28;
+            border-color: rgba(255, 255, 255, 0.06);
+        }
+
+        /* Нижняя панель навигации */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px 10px;
+            transition: color 0.2s;
+        }
+
+        .nav-btn:hover, .nav-btn:active {
+            color: #ffffff;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        /* ================= ЭКРАН РЕЗУЛЬТАТА ================= */
+        #result-screen {
+            animation: fadeIn 0.5s ease;
+            padding-bottom: 16px;
+        }
+
+        .result-top-title {
+            text-align: center;
+            font-size: 12px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 14px;
         }
 
         .canvas-wrapper {
             display: flex;
             justify-content: center;
-            margin: 6px 0 10px;
+            margin-bottom: 16px;
         }
+
         canvas {
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            border-radius: 16px;
+            border: 1px solid rgba(46, 242, 216, 0.28);
+            box-shadow: 0 0 28px rgba(46, 242, 216, 0.1);
             max-width: 100%;
             height: auto;
         }
 
-        .coords-badge {
+        .match-card {
             display: flex;
-            justify-content: space-around;
-            background-color: var(--secondary-bg);
-            padding: 8px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            font-size: 13px;
-            font-weight: 600;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
         }
 
-        .result-description-card {
-            background-color: var(--secondary-bg);
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
+        .politician-photo {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--neon-cyan);
+            flex-shrink: 0;
         }
-        .result-description-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: var(--button-color);
+
+        .match-info {
+            flex: 1;
         }
+
+        .politician-name {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--neon-cyan);
+            margin-bottom: 4px;
+        }
+
+        .match-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
         .politician-desc {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 14px;
-            line-height: 1.45;
+            line-height: 1.5;
+            color: #d4d4dc;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
         }
 
         .action-buttons {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-bottom: 16px;
         }
-        .btn-primary {
-            background-color: var(--button-color);
-            color: var(--button-text);
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
+
+        .btn-action-primary {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--neon-cyan);
+            background: rgba(46, 242, 216, 0.12);
+            color: var(--neon-cyan);
+            font-size: 14px;
+            font-weight: 700;
             cursor: pointer;
+            transition: transform 0.15s;
         }
-        .btn-secondary {
-            background-color: var(--secondary-bg);
-            color: var(--text-color);
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 500;
+
+        .btn-action-primary:active { transform: scale(0.98); }
+
+        .btn-action-secondary {
+            width: 100%;
+            padding: 13px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-main);
+            font-size: 13px;
             cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .btn-action-secondary:active {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Анимации */
+        @keyframes scrollLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes scrollRight {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.6; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- ЭКРАН КВИЗА -->
-    <div id="quiz-screen">
+
+    <!-- 1. НАЧАЛЬНЫЙ ЭКРАН С ДВИЖУЩИМИСЯ ФОТО -->
+    <div id="start-screen">
         <div>
-            <div class="progress-wrapper">
-                <div class="progress-text">
-                    <span id="q-counter">Вопрос 1 из 20</span>
-                    <span id="q-percent">0%</span>
-                </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="progress-fill"></div>
-                </div>
+            <div class="start-top-meta">
+                <span class="pulse-dot"></span>
+                <span>ТЕСТ · 27 ВОПРОСОВ · 16 ПОЛИТИКОВ</span>
+            </div>
+            <h1 class="start-title">Политические<br>координаты</h1>
+            <p class="start-subtitle">Узнай своё точное место на карте идеологий и выясни, кто из исторических и современных лидеров — твой двойник.</p>
+        </div>
+
+        <!-- Бегущая лента из 2 рядов фото -->
+        <div class="marquee-section" id="marquee-container"></div>
+
+        <button class="start-btn" onclick="startQuiz()">
+            <span>Начать тест</span>
+            <span>→</span>
+        </button>
+    </div>
+
+    <!-- 2. ЭКРАН ПРОХОЖДЕНИЯ ВОПРОСОВ -->
+    <div id="quiz-screen" class="hidden">
+        <div>
+            <div class="quiz-header">
+                <div class="quiz-app-title">Политические координаты</div>
+                <div class="segmented-bar" id="segmented-bar"></div>
             </div>
 
-            <div class="question-card">
-                <div class="question-text" id="question-text">Загрузка вопроса...</div>
+            <div class="question-block">
+                <div class="q-counter" id="q-counter">1 / 27</div>
+                <div class="question-text" id="question-text">Загрузка...</div>
             </div>
         </div>
 
-        <div class="answers-list">
-            <button class="btn-answer ans-strong-yes" onclick="handleAnswer(2)">Полностью согласен</button>
-            <button class="btn-answer ans-yes" onclick="handleAnswer(1)">Скорее согласен</button>
-            <button class="btn-answer ans-neutral" onclick="handleAnswer(0)">Нейтрально / Не знаю</button>
-            <button class="btn-answer ans-no" onclick="handleAnswer(-1)">Скорее не согласен</button>
-            <button class="btn-answer ans-strong-no" onclick="handleAnswer(-2)">Совершенно не согласен</button>
+        <div>
+            <div class="answers-list" id="answers-list">
+                <button class="btn-answer" data-val="2" onclick="handleAnswer(2, this)">полностью согласен</button>
+                <button class="btn-answer" data-val="1" onclick="handleAnswer(1, this)">скорее согласен</button>
+                <button class="btn-answer" data-val="0" onclick="handleAnswer(0, this)">нейтрально / по-разному</button>
+                <button class="btn-answer" data-val="-1" onclick="handleAnswer(-1, this)">скорее не согласен</button>
+                <button class="btn-answer" data-val="-2" onclick="handleAnswer(-2, this)">полностью не согласен</button>
+            </div>
+
+            <div class="bottom-nav">
+                <button class="nav-btn" id="btn-back" onclick="prevQuestion()">
+                    <span>←</span>
+                    <span>назад</span>
+                </button>
+                <button class="nav-btn" onclick="goHome()">
+                    <span>☰</span>
+                    <span>в начало</span>
+                </button>
+                <button class="nav-btn" onclick="shareQuizLink()">
+                    <span>↗</span>
+                    <span>поделиться</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- ЭКРАН РЕЗУЛЬТАТА -->
+    <!-- 3. ЭКРАН РЕЗУЛЬТАТА -->
     <div id="result-screen" class="hidden">
-        <div>
-            <div class="result-header">
-                <div class="result-subtitle">Ваш политический двойник:</div>
-                <div class="politician-photo-wrapper">
-                    <img id="res-img" src="" alt="Политик" class="politician-photo">
-                </div>
+        <div class="result-top-title">Твои политические координаты</div>
+
+        <div class="canvas-wrapper">
+            <canvas id="compassCanvas" width="290" height="290"></canvas>
+        </div>
+
+        <div class="match-card">
+            <img id="res-img" src="" alt="Политик" class="politician-photo">
+            <div class="match-info">
                 <div class="politician-name" id="res-name">—</div>
-            </div>
-
-            <div class="canvas-wrapper">
-                <canvas id="compassCanvas" width="280" height="280"></canvas>
-            </div>
-
-            <div class="coords-badge">
-                <span id="res-x">Экономика (X): 0.0</span>
-                <span id="res-y">Власть (Y): 0.0</span>
-            </div>
-
-            <div class="result-description-card">
-                <div class="result-description-title">О вашей позиции:</div>
-                <div class="politician-desc" id="res-desc"></div>
+                <div class="match-meta" id="res-coords">X: 0.0 · Y: 0.0</div>
             </div>
         </div>
+
+        <div class="politician-desc" id="res-desc"></div>
 
         <div class="action-buttons">
-            <button class="btn-primary" onclick="shareResult()">Поделиться результатом в чате</button>
-            <button class="btn-secondary" onclick="shareQuizLink()">🔗 Поделиться ссылкой на тест</button>
-            <button class="btn-secondary" onclick="saveCompassImage()">💾 Сохранить график (PNG)</button>
-            <button class="btn-secondary" onclick="restartQuiz()">Пройти тест заново</button>
+            <button class="btn-action-primary" onclick="shareResult()">поделиться результатом</button>
+            <button class="btn-action-secondary" onclick="saveCompassImage()">сохранить график (PNG)</button>
+            <button class="btn-action-secondary" onclick="openExternalLink('https://t.me/doxajournal')">Новые тесты будут тут</button>
+            <button class="btn-action-secondary" onclick="restartQuiz()">пройти тест заново</button>
         </div>
     </div>
+
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
     tg.ready();
+    if (tg.setHeaderColor) tg.setHeaderColor('#0a0a0c');
+    if (tg.setBackgroundColor) tg.setBackgroundColor('#0a0a0c');
+
+    const BOT_SHARE_URL = "https://t.me/ultimate_politician_bot";
 
     const POLITICIANS = [
-        { name: "Владимир Ленин", x: -9.5, y: 9.0, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Lenin_in_1920_%28cropped%29.jpg/400px-Lenin_in_1920_%28cropped%29.jpg", desc: "Вы — Владимир Ленин! Вы поддерживаете идею радикального переустройства общества через устранение классовых различий. Но для начала придется действовать жестко..." },
-        { name: "Александра Коллонтай", x: -8.0, y: 5.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Alexandra_Kollontai_1920s.jpg/400px-Alexandra_Kollontai_1920s.jpg", desc: "Вы — Александра Коллонтай, первая женщина-министр! Вы боретесь за полную эмансипацию женщин, критикуете современный брак, основанный на экономическом расчете и церковно-государственном давлении. Также вы продвигаете оплачиваемые отпуска по беременности и легализацию абортов." },
-        { name: "Роза Люксембург", x: -8.5, y: 2.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Rosa_Luxemburg_1915.jpg/400px-Rosa_Luxemburg_1915.jpg", desc: "Вы — Роза Люксембург! Вы выступаете за экономическое равенство и демократию на рабочем месте, свободу дискуссий и ликвидацию бюрократизма." },
-        { name: "Индира Ганди", x: -4.5, y: 5.0, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Indira_Gandhi_1966.jpg/400px-Indira_Gandhi_1966.jpg", desc: "Вы — Индира Ганди: прагматичный этатист, вы поддерживаете сильную роль государства в экономике и жесткую вертикаль для сохранения порядка." },
-        { name: "Петр Кропоткин", x: -9.5, y: -9.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Kropotkin_by_Nadar.jpg/400px-Kropotkin_by_Nadar.jpg", desc: "Вы — Петр Кропоткин, идеолог анархо-коммунизма! Вы выступаете против частной собственности, за самоорганизацию и отказ от государства." },
-        { name: "Субкоманданте Маркос", x: -7.0, y: -6.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Delegacion_zapatista_en_Mexico_%28cropped%29.jpg/400px-Delegacion_zapatista_en_Mexico_%28cropped%29.jpg", desc: "Вы — мексиканский политик субкоманданте Маркос! В мире победившего капитализма вы видите альтернативу в идеалах низового самоуправления, автономии общин, антиглобализма и справедливого распределения ресурсов без давления централизованной власти." },
-        { name: "Франклин Рузвельт", x: -2.5, y: 1.0, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/FDR_in_1933.jpg/400px-FDR_in_1933.jpg", desc: "Вы — президент США Франклин Рузвельт, понимающий, что капитализм барахлит и его надо чинить. Вы верите, что капитализм может работать на благо общества, если государство вовремя вмешивается, регулирует рынок и защищает слабых. Еще вы не против посотрудничать со Сталиным ради общего блага." },
-        { name: "Ангела Меркель", x: 1.5, y: -1.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Angela_Merkel_2019_%28cropped%29.jpg/400px-Angela_Merkel_2019_%28cropped%29.jpg", desc: "Вы — канцлерка Германии Ангела Меркель! Капитализм повсюду, но, чтобы не раскачивать лодку, вы вкладываетесь в социальную политику и поддерживаете иммиграцию. Стабильность, компромиссы и умеренность — ваш девиз." },
-        { name: "Эммануэль Макрон", x: 3.5, y: -2.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Emmanuel_Macron_in_2023_%28cropped%29.jpg/400px-Emmanuel_Macron_in_2023_%28cropped%29.jpg", desc: "Вы — президент Франции Эммануэль Макрон! Вы определяете себя как центрист, лавирующий между правыми и левыми. В международной политике вы возвращаете величие Франции, продвигая ее интересы во всех уголках мира. Когда речь заходит о внутренней политике, вы можете обойти решения парламента и решить не идти на поводу у протестующих, потому что президент должен быть сильным." },
-        { name: "Бенито Муссолини", x: 0.5, y: 9.0, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Benito_Mussolini_in_1927.jpg/400px-Benito_Mussolini_in_1927.jpg", desc: "Вы — Муссолини... Государственные интересы для вас выше личных интересов граждан. Вы считаете, что сделаете Италию такой же великой, какой была Римская империя, но у вас это не получится." },
-        { name: "Владимир Путин", x: 1.5, y: 7.0, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vladimir_Putin_%282024-05-07%29_%28cropped%29.jpg/400px-Vladimir_Putin_%282024-05-07%29_%28cropped%29.jpg", desc: "Вы — Путин... Сильная рука, коррупция, бессмысленные войны — это про вас. На публике вы жалеете о распаде СССР, но при вас богатеют олигархи, а обычные люди становятся беднее." },
-        { name: "Марин Ле Пен", x: 2.5, y: 4.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Marine_Le_Pen_2017_%28cropped%29.jpg/400px-Marine_Le_Pen_2017_%28cropped%29.jpg", desc: "Вы — ультраправая популистка Марин Ле Пен. Возвращение величие своей страны вы видите в противостоянии миграции и традиционным ценностях." },
-        { name: "Аугусто Пиночет", x: 8.0, y: 9.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Augusto_Pinochet_1975.jpg/400px-Augusto_Pinochet_1975.jpg", desc: "Вы — чилийский диктатор Аугусто Пиночет. Вы не против прийти к власти в результате военного переворота при поддержке США, сместив демократически избранного лидера страны. Вы арестовываете всех, кто с вами не согласен, и защищаете интересы крупного бизнеса (прежде всего американского)." },
-        { name: "Дональд Трамп", x: 5.5, y: 2.5, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Donald_Trump_official_portrait.jpg/400px-Donald_Trump_official_portrait.jpg", desc: "Вы — ДОНАЛЬД ТРАМП!!! При вас стало небезопасно ходить по улицам, потому что могут арестовать и забрать в миграционную тюрьму. Вы обещали, что будете продвигать мир во всем мире, но начинаете еще одну войну. Интересы крупных корпораций для вас важнее всего, потому что даже вам хочется заработать побольше денег. При этом вы говорите, что защищаете интересы простых людей." },
-        { name: "Маргарет Тэтчер", x: 8.0, y: 3.0, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Margaret_Thatcher.png/400px-Margaret_Thatcher.png", desc: "Вы — глава правительства Великобритании Маргарет Тэтчер, сторонница свободного рынка. Проблемы страны вы видите в профсоюзах, поэтому решаете бороться с ними, попутно лишая тысячи людей их рабочих мест. Когда напряжение в стране нарастает, вы воюете за отдаленные острова, о которых почти никто в вашей стране не слышал." }
+        { name: "Владимир Ленин", x: -9.5, y: 9.0, img: "https://upload.wikimedia.org/wikipedia/commons/1/1f/Vladimir_Lenin_in_July_1920_by_Pavel_Zhukov.jpg", desc: "Вы — Владимир Ленин! Вы поддерживаете идею радикального переустройства общества через устранение классовых различий. Но для начала придется действовать жестко..." },
+        { name: "Александра Коллонтай", x: -8.0, y: 5.5, img: "https://upload.wikimedia.org/wikipedia/commons/e/ed/Aleksandra_Kollontai.jpg", desc: "Вы — Александра Коллонтай, первая женщина-министр! Вы боретесь за полную эмансипацию женщин, критикуете современный брак, основанный на экономическом расчете и церковно-государственном давлении. Также вы продвигаете оплачиваемые отпуска по беременности и легализацию абортов." },
+        { name: "Роза Люксембург", x: -8.5, y: 2.5, img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Rosa_Luxemburg_%2827675721178%29.jpg", desc: "Вы — Роза Люксембург! Вы выступаете за экономическое равенство и демократию на рабочем месте, свободу дискуссий и ликвидацию бюрократизма." },
+        { name: "Индира Ганди", x: -4.5, y: 5.0, img: "https://upload.wikimedia.org/wikipedia/commons/a/a1/Indira_Gandhi_official_portrait.png", desc: "Вы — Индира Ганди: прагматичный этатист, вы поддерживаете сильную роль государства в экономике и жесткую вертикаль для сохранения порядка." },
+        { name: "Петр Кропоткин", x: -9.5, y: -9.5, img: "https://upload.wikimedia.org/wikipedia/commons/b/bb/Kropotkin1.jpg", desc: "Вы — Петр Кропоткин, идеолог анархо-коммунизма! Вы выступаете против частной собственности, за самоорганизацию и отказ от государства." },
+        { name: "Субкоманданте Маркос", x: -7.0, y: -6.5, img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Sub_Marcos.jpg", desc: "Вы — мексиканский политик субкоманданте Маркос! В мире победившего капитализма вы видите альтернативу в идеалах низового самоуправления, автономии общин, антиглобализма и справедливого распределения ресурсов без давления централизованной власти." },
+        { name: "Зохран Мамдани", x: -6.0, y: -3.5, img: "https://upload.wikimedia.org/wikipedia/commons/2/25/Zohran_Mamdani_05.25.25_%28b%29.jpg", desc: "Вы — мэр Нью-Йорка Зохран Мамдани, демократический социалист! Вы верите, что город и экономика должны работать для обычных людей, а не для миллиардеров и корпораций. Заморозка аренды, бесплатный транспорт, защита прав мигрантов и гражданских свобод — ваши главные приоритеты." },
+        { name: "Франклин Рузвельт", x: -2.5, y: 1.0, img: "https://upload.wikimedia.org/wikipedia/commons/4/42/FDR_1944_Color_Portrait.jpg", desc: "Вы — президент США Франклин Рузвельт, понимающий, что капитализм барахлит и его надо чинить. Вы верите, что капитализм может работать на благо общества, если государство вовремя вмешивается, регулирует рынок и защищает слабых. Еще вы не против посотрудничать со Сталиным ради общего блага." },
+        { name: "Ангела Меркель", x: 1.5, y: -1.5, img: "https://upload.wikimedia.org/wikipedia/commons/8/82/Angela_Merkel_2023_%28cropped%29.jpg", desc: "Вы — канцлерка Германии Ангела Меркель! Капитализм повсюду, но, чтобы не раскачивать лодку, вы вкладываетесь в социальную политику и поддерживаете иммиграцию. Стабильность, компромиссы и умеренность — ваш девиз." },
+        { name: "Эммануэль Макрон", x: 3.5, y: -2.5, img: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Emmanuel_Macron_2025_%28cropped%29.jpg", desc: "Вы — президент Франции Эммануэль Макрон! Вы определяете себя как центрист, лавирующий между правыми и левыми. В международной политике вы возвращаете величие Франции, продвигая ее интересы во всех уголках мира. Когда речь заходит о внутренней политике, вы можете обойти решения парламента и решить не идти на поводу у протестующих, потому что президент должен быть сильным." },
+        { name: "Бенито Муссолини", x: 0.5, y: 9.0, img: "https://upload.wikimedia.org/wikipedia/commons/3/38/Duce_Benito_Mussolini.jpg", desc: "Вы — Муссолини... Государственные интересы для вас выше личных интересов граждан. Вы считаете, что сделаете Италию такой же великой, какой была Римская империя, но у вас это не получится." },
+        { name: "Владимир Путин", x: 1.5, y: 7.0, img: "https://upload.wikimedia.org/wikipedia/commons/1/1c/Vladimir_Putin_%282026_02_23%29_%28cropped%29.jpg", desc: "Вы — Путин... Сильная рука, коррупция, бессмысленные войны — это про вас. На публике вы жалеете о распаде СССР, но при вас богатеют олигархи, а обычные люди становятся беднее." },
+        { name: "Марин Ле Пен", x: 2.5, y: 4.5, img: "https://upload.wikimedia.org/wikipedia/commons/8/81/Marine_Le_Pen_2025_%28cropped%29.jpg", desc: "Вы — ультраправая популистка Марин Ле Пен. Возвращение величие своей страны вы видите в противостоянии миграции и традиционных ценностях." },
+        { name: "Аугусто Пиночет", x: 8.0, y: 9.5, img: "https://upload.wikimedia.org/wikipedia/commons/f/ff/Augusto_Pinochet_foto_oficial.jpg", desc: "Вы — чилийский диктатор Аугусто Пиночет. Вы не против прийти к власти в результате военного переворота при поддержке США, сместив демократически избранного лидера страны. Вы арестовываете всех, кто с вами не согласен, и защищаете интересы крупного бизнеса (прежде всего американского)." },
+        { name: "Дональд Трамп", x: 5.5, y: 2.5, img: "https://upload.wikimedia.org/wikipedia/commons/1/16/Official_Presidential_Portrait_of_President_Donald_J._Trump_%282025%29.jpg", desc: "Вы — ДОНАЛЬД ТРАМП!!! При вас стало небезопасно ходить по улицам, потому что могут арестовать и забрать в миграционную тюрьму. Вы обещали, что будете продвигать мир во всем мире, но начинаете еще одну войну. Интересы крупных корпораций для вас важнее всего, потому что даже вам хочется заработать побольше денег. При этом вы говорите, что защищаете интересы простых людей." },
+        { name: "Маргарет Тэтчер", x: 8.0, y: 3.0, img: "https://upload.wikimedia.org/wikipedia/commons/3/3d/Margaret_Thatcher_stock_portrait_%28cropped%29.jpg", desc: "Вы — глава правительства Великобритании Маргарет Тэтчер, сторонница свободного рынка. Проблемы страны вы видите в профсоюзах, поэтому решаете бороться с ними, попутно лишая тысячи людей их рабочих мест. Когда напряжение в стране нарастает, вы воюете за отдаленные острова, о которых почти никто в вашей стране не слышал." }
     ];
 
     const QUESTIONS = [
-        { text: "Государство должно полностью контролировать стратегические отрасли экономики и крупные предприятия.", axis: "x", dir: -1 },
-        { text: "Свободный рынок эффективнее любых государственных регуляторов.", axis: "x", dir: 1 },
-        { text: "Налоги на богатых должны быть высокими, чтобы полностью финансировать бесплатную медицину и образование для всех.", axis: "x", dir: -1 },
-        { text: "Граждане должны иметь право на свободное владение и ношение огнестрельного оружия для самообороны.", axis: "x", dir: 1 },
-        { text: "Крупные производства должны быть национализированы в интересах трудящихся.", axis: "x", dir: -1 },
-        { text: "Обычные рабочие и сотрудники должны участвовать в принятии ключевых решений относительно деятельности их компании.", axis: "x", dir: -1 },
-        { text: "Частная собственность на землю и природные ресурсы должна быть ограничена или запрещена в пользу общества.", axis: "x", dir: -1 },
-        { text: "Государство обязано оказывать прямую финансовую поддержку национальному бизнесу и защищать его от иностранной конкуренции.", axis: "x", dir: 1 },
-        { text: "Социальные пособия и выплаты бездельникам только портят людей; каждый должен обеспечивать себя сам.", axis: "x", dir: 1 },
-        { text: "Благосостояние общества измеряется не прибылью корпораций, а ликвидацией имущественного неравенства между классами.", axis: "x", dir: -1 },
-        { text: "Сильная рука и стабильность важнее демократических процедур и сменяемости.", axis: "y", dir: 1 },
-        { text: "Государство не имеет права вмешиваться в частную жизнь и влиять на убеждения граждан.", axis: "y", dir: -1 },
-        { text: "Национальные традиции, религия и исторические ценности должны охраняться государством на законодательном уровне.", axis: "y", dir: 1 },
-        { text: "Защита общественного порядка и борьба с преступностью важнее соблюдения процессуальных прав подозреваемых.", axis: "y", dir: 1 },
-        { text: "Государственные границы между странами необходимы для поддержания суверенитета и безопасности.", axis: "y", dir: 1 },
-        { text: "Любые формы цензуры в интернете и СМИ должны быть полностью запрещены ради свободы слова.", axis: "y", dir: -1 },
-        { text: "Централизованная бюрократическая машина государства эффективнее любых местных или автономных инициатив снизу.", axis: "y", dir: 1 },
-        { text: "Местные общины и регионы должны иметь право на полную автономию, вплоть до отказа подчиняться федеральным законам.", axis: "y", dir: -1 },
-        { text: "Политические протесты и митинги, несогласованные с властями, должны жестко пресекаться ради сохранения порядка.", axis: "y", dir: 1 },
-        { text: "Смертная казнь за особо тяжкие преступления является абсолютно необходимой мерой наказания.", axis: "y", dir: 1 }
+        { text: "Стратегические отрасли — энергетика, инфраструктура, добывающая промышленность — должны находиться под общественным, а не частным контролем.", axis: "x", dir: -1 },
+        { text: "Право граждан на частную жизнь важнее возможностей государства вести массовую слежку под предлогом обеспечения безопасности.", axis: "y", dir: -1 },
+        { text: "Рыночная конкуренция распределяет ресурсы эффективнее, чем любое государственное вмешательство в экономику.", axis: "x", dir: 1 },
+        { text: "В кризисных ситуациях правительство должно иметь право временно ограничивать полномочия парламента ради оперативного принятия решений.", axis: "y", dir: 1 },
+        { text: "Национальные традиции, религия и исторические ценности должны охраняться государством.", axis: "y", dir: 1 },
+        { text: "Высокое прогрессивное налогообложение крупных состояний — необходимое условие для всеобщей бесплатной медицины и образования.", axis: "x", dir: -1 },
+        { text: "Государство должно сохранять строгий нейтралитет в религиозных вопросах и не поддерживать ни одну конфессию на законодательном уровне.", axis: "y", dir: -1 },
+        { text: "Право на владение огнестрельным оружием в целях самообороны должно быть гарантировано государством.", axis: "x", dir: 1 },
+        { text: "Политическая стабильность и эффективность управления важнее соблюдения демократических процедур и регулярной сменяемости власти.", axis: "y", dir: 1 },
+        { text: "Крупные производственные предприятия должны перейти под государственный или коллективный контроль работников.", axis: "x", dir: -1 },
+        { text: "Государство не должно законодательно закреплять привилегии для одной модели семьи и ограничивать права тех, кто её не разделяет.", axis: "y", dir: -1 },
+        { text: "Общественная безопасность важнее процессуальных прав подозреваемых, в интересах большинства ими можно пожертвовать.", axis: "y", dir: 1 },
+        { text: "Работники должны иметь реальное влияние на управленческие решения в компаниях, где они заняты, а не быть просто наёмной силой.", axis: "x", dir: -1 },
+        { text: "Право голоса должны иметь лишь граждане с достаточным уровнем политической грамотности и образования.", axis: "y", dir: 1 },
+        { text: "Любые ограничения свободы слова в интернете и СМИ (цензура, блокировки, фильтрация) недопустимы.", axis: "y", dir: -1 },
+        { text: "Земля и природные ресурсы не должны концентрироваться в частной собственности, они принадлежат всему обществу.", axis: "x", dir: -1 },
+        { text: "Контроль над государственными границами — необходимое условие национального суверенитета и безопасности.", axis: "y", dir: 1 },
+        { text: "Употребление наркотических веществ совершеннолетними — личный выбор человека, а не предмет уголовного преследования.", axis: "y", dir: -1 },
+        { text: "Государственные субсидии отечественному бизнесу и протекционизм в торговле — законный инструмент экономической политики.", axis: "x", dir: 1 },
+        { text: "Централизованное государственное управление справляется с общественными задачами лучше, чем децентрализованные или местные инициативы.", axis: "y", dir: 1 },
+        { text: "Государство не вправе вмешиваться в частную жизнь граждан и навязывать им политические или идеологические убеждения.", axis: "y", dir: -1 },
+        { text: "Система социальных пособий порождает зависимость от государства и снижает мотивацию к труду. Каждый должен обеспечивать себя сам.", axis: "x", dir: 1 },
+        { text: "Местные сообщества и регионы должны иметь реальную автономию, включая право не выполнять решения центра, которые нарушают их интересы.", axis: "y", dir: -1 },
+        { text: "Сохранение общественного спокойствия и безопасности на улицах важнее, чем право граждан на проведение стихийных политических протестов.", axis: "y", dir: 1 },
+        { text: "Преодоление имущественного неравенства важнее роста прибыли корпораций.", axis: "x", dir: -1 },
+        { text: "Итоги демократических выборов должны признаваться и выполняться, даже если победившая партия проводит непопулярную политику.", axis: "y", dir: -1 },
+        { text: "Смертная казнь за особо тяжкие преступления является необходимой и справедливой мерой наказания.", axis: "y", dir: 1 }
     ];
 
     let currentQ = 0;
-    let scoreX = 0;
-    let scoreY = 0;
+    let userAnswers = new Array(QUESTIONS.length).fill(null);
+    let isTransitioning = false;
+    let scrambleInterval = null;
     let finalMatch = null;
     let finalCoords = { x: 0, y: 0 };
 
-    function renderQuestion() {
-        const q = QUESTIONS[currentQ];
-        document.getElementById("question-text").innerText = q.text;
-        document.getElementById("q-counter").innerText = `Вопрос ${currentQ + 1} из ${QUESTIONS.length}`;
-        const percent = Math.round((currentQ / QUESTIONS.length) * 100);
-        document.getElementById("q-percent").innerText = `${percent}%`;
-        document.getElementById("progress-fill").style.width = `${percent}%`;
+    function initMarquee() {
+        const container = document.getElementById("marquee-container");
+        const row1Pols = POLITICIANS.slice(0, 8);
+        const row2Pols = POLITICIANS.slice(8, 16);
+
+        const buildRow = (list, direction) => {
+            const row = document.createElement("div");
+            row.className = `marquee-row ${direction}`;
+            const doubled = [...list, ...list];
+            doubled.forEach(p => {
+                const card = document.createElement("div");
+                card.className = "marquee-card";
+                const img = document.createElement("img");
+                img.src = p.img;
+                img.alt = p.name;
+                img.loading = "lazy";
+                card.appendChild(img);
+                row.appendChild(card);
+            });
+            return row;
+        };
+
+        container.appendChild(buildRow(row1Pols, "left"));
+        container.appendChild(buildRow(row2Pols, "right"));
     }
 
-    function handleAnswer(val) {
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-
-        const q = QUESTIONS[currentQ];
-        const delta = val * q.dir;
-
-        if (q.axis === "x") scoreX += delta;
-        if (q.axis === "y") scoreY += delta;
-
-        currentQ++;
-
-        if (currentQ < QUESTIONS.length) {
-            renderQuestion();
-        } else {
-            showResult();
+    function initProgressBar() {
+        const bar = document.getElementById("segmented-bar");
+        bar.innerHTML = "";
+        for (let i = 0; i < QUESTIONS.length; i++) {
+            const cell = document.createElement("div");
+            cell.className = "seg-cell";
+            cell.id = `seg-${i}`;
+            bar.appendChild(cell);
         }
     }
 
+    function updateProgressBar() {
+        for (let i = 0; i < QUESTIONS.length; i++) {
+            const cell = document.getElementById(`seg-${i}`);
+            cell.className = "seg-cell";
+            if (i < currentQ) cell.classList.add("done");
+            if (i === currentQ) cell.classList.add("active");
+        }
+        document.getElementById("q-counter").innerText = `${currentQ + 1} / ${QUESTIONS.length}`;
+        document.getElementById("btn-back").disabled = (currentQ === 0);
+    }
+
+    function scrambleText(element, targetText) {
+        if (scrambleInterval) clearInterval(scrambleInterval);
+        const chars = "№€§±¿≠≤≥★¶#%&*+";
+        let iteration = 0;
+        const totalSteps = 10;
+
+        scrambleInterval = setInterval(() => {
+            element.innerText = targetText
+                .split("")
+                .map((char, idx) => {
+                    if (char === " " || char === "—" || char === "." || char === ",") return char;
+                    if (idx < (targetText.length * iteration) / totalSteps) {
+                        return targetText[idx];
+                    }
+                    return chars[Math.floor(Math.random() * chars.length)];
+                })
+                .join("");
+
+            iteration++;
+            if (iteration > totalSteps) {
+                clearInterval(scrambleInterval);
+                element.innerText = targetText;
+            }
+        }, 28);
+    }
+
+    function renderQuestion(withScramble = true) {
+        isTransitioning = false;
+        const q = QUESTIONS[currentQ];
+        const qEl = document.getElementById("question-text");
+
+        const buttons = document.querySelectorAll(".btn-answer");
+        buttons.forEach(btn => {
+            btn.classList.remove("selected", "dimmed");
+            if (userAnswers[currentQ] !== null && Number(btn.dataset.val) === userAnswers[currentQ]) {
+                btn.classList.add("selected");
+            }
+        });
+
+        updateProgressBar();
+
+        if (withScramble) {
+            scrambleText(qEl, q.text);
+        } else {
+            qEl.innerText = q.text;
+        }
+    }
+
+    function startQuiz() {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        document.getElementById("start-screen").classList.add("hidden");
+        document.getElementById("quiz-screen").classList.remove("hidden");
+        renderQuestion(true);
+    }
+
+    function goHome() {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        document.getElementById("quiz-screen").classList.add("hidden");
+        document.getElementById("start-screen").classList.remove("hidden");
+    }
+
+    function handleAnswer(val, clickedBtn) {
+        if (isTransitioning) return;
+        isTransitioning = true;
+
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+        userAnswers[currentQ] = val;
+
+        const buttons = document.querySelectorAll(".btn-answer");
+        buttons.forEach(btn => {
+            if (btn === clickedBtn) {
+                btn.classList.add("selected");
+                btn.classList.remove("dimmed");
+            } else {
+                btn.classList.add("dimmed");
+                btn.classList.remove("selected");
+            }
+        });
+
+        setTimeout(() => {
+            currentQ++;
+            if (currentQ < QUESTIONS.length) {
+                renderQuestion(true);
+            } else {
+                showResult();
+            }
+        }, 360);
+    }
+
+    function prevQuestion() {
+        if (isTransitioning || currentQ === 0) return;
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        currentQ--;
+        renderQuestion(false);
+    }
+
     function showResult() {
+        let scoreX = 0;
+        let scoreY = 0;
+
+        QUESTIONS.forEach((q, idx) => {
+            const ans = userAnswers[idx] || 0;
+            if (q.axis === "x") scoreX += ans * q.dir;
+            if (q.axis === "y") scoreY += ans * q.dir;
+        });
+
         const maxPossibleX = QUESTIONS.filter(q => q.axis === "x").length * 2;
         const maxPossibleY = QUESTIONS.filter(q => q.axis === "y").length * 2;
 
@@ -384,14 +783,13 @@
 
         document.getElementById("res-img").src = bestMatch.img;
         document.getElementById("res-name").innerText = bestMatch.name;
-        document.getElementById("res-x").innerText = `Экономика (X): ${userX > 0 ? '+' + userX : userX}`;
-        document.getElementById("res-y").innerText = `Власть (Y): ${userY > 0 ? '+' + userY : userY}`;
+        document.getElementById("res-coords").innerText = `Экономика: ${userX > 0 ? '+' + userX : userX} · Власть: ${userY > 0 ? '+' + userY : userY}`;
         document.getElementById("res-desc").innerText = bestMatch.desc;
 
-        drawCompass(userX, userY, bestMatch);
+        drawDarkCompass(userX, userY, bestMatch);
     }
 
-    function drawCompass(userX, userY, politician) {
+    function drawDarkCompass(userX, userY, politician) {
         const canvas = document.getElementById("compassCanvas");
         const ctx = canvas.getContext("2d");
         const size = canvas.width;
@@ -399,12 +797,13 @@
 
         ctx.clearRect(0, 0, size, size);
 
-        ctx.fillStyle = "#ff8a80"; ctx.fillRect(0, 0, half, half);
-        ctx.fillStyle = "#82b1ff"; ctx.fillRect(half, 0, half, half);
-        ctx.fillStyle = "#b9f6ca"; ctx.fillRect(0, half, half, half);
-        ctx.fillStyle = "#ea80fc"; ctx.fillRect(half, half, half, half);
+        const bgGrad = ctx.createRadialGradient(half, half, 10, half, half, half * 1.2);
+        bgGrad.addColorStop(0, "#14181c");
+        bgGrad.addColorStop(1, "#0a0b0e");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, size, size);
 
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
         ctx.lineWidth = 1;
         const step = size / 10;
         for (let i = 1; i < 10; i++) {
@@ -412,24 +811,24 @@
             ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
         }
 
-        ctx.strokeStyle = "#222222";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(half, 0); ctx.lineTo(half, size);
-        ctx.moveTo(0, half); ctx.lineTo(size, half);
+        ctx.moveTo(half, 18); ctx.lineTo(half, size - 18);
+        ctx.moveTo(18, half); ctx.lineTo(size - 18, half);
         ctx.stroke();
 
-        ctx.fillStyle = "#111111";
-        ctx.font = "bold 10px sans-serif";
+        ctx.fillStyle = "#8e8e98";
+        ctx.font = "10px monospace";
         ctx.textAlign = "center";
-        ctx.fillText("АВТОРИТАРИЗМ", half, 12);
-        ctx.fillText("СВОБОДА", half, size - 4);
+        ctx.fillText("АВТОРИТАРИЗМ", half, 13);
+        ctx.fillText("СВОБОДА", half, size - 6);
 
-        ctx.textAlign = "left"; ctx.fillText("ЛЕВЫЕ", 4, half - 4);
-        ctx.textAlign = "right"; ctx.fillText("ПРАВЫЕ", size - 4, half - 4);
+        ctx.textAlign = "left"; ctx.fillText("ЛЕВЫЕ", 8, half - 6);
+        ctx.textAlign = "right"; ctx.fillText("ПРАВЫЕ", size - 8, half - 6);
 
-        const toPxX = (x) => half + (x / 10) * (half - 14);
-        const toPxY = (y) => half - (y / 10) * (half - 14);
+        const toPxX = (x) => half + (x / 10) * (half - 24);
+        const toPxY = (y) => half - (y / 10) * (half - 24);
 
         const uPxX = toPxX(userX);
         const uPxY = toPxY(userY);
@@ -437,49 +836,63 @@
         const pPxY = toPxY(politician.y);
 
         ctx.setLineDash([3, 3]);
-        ctx.strokeStyle = "#333333";
+        ctx.strokeStyle = "rgba(46, 242, 216, 0.45)";
         ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.moveTo(uPxX, uPxY); ctx.lineTo(pPxX, pPxY); ctx.stroke();
         ctx.setLineDash([]);
 
-        ctx.beginPath(); ctx.arc(pPxX, pPxY, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#111111"; ctx.fill();
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(pPxX, pPxY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#f5b82e"; ctx.fill();
 
-        ctx.fillStyle = "#111111";
-        ctx.font = "bold 10px sans-serif";
+        ctx.fillStyle = "#f5b82e";
+        ctx.font = "bold 10px monospace";
         ctx.textAlign = pPxX > half ? "right" : "left";
         const shortName = politician.name.split(" ").slice(1).join(" ") || politician.name;
-        ctx.fillText(shortName, pPxX + (pPxX > half ? -7 : 7), pPxY + (pPxY < 20 ? 10 : -3));
+        ctx.fillText(shortName, pPxX + (pPxX > half ? -7 : 7), pPxY + (pPxY < 26 ? 12 : -4));
 
-        ctx.beginPath(); ctx.arc(uPxX, uPxY, 7, 0, Math.PI * 2);
-        ctx.fillStyle = "#d50000"; ctx.fill();
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+        const glow = ctx.createRadialGradient(uPxX, uPxY, 2, uPxX, uPxY, 18);
+        glow.addColorStop(0, "rgba(46, 242, 216, 0.9)");
+        glow.addColorStop(1, "rgba(46, 242, 216, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(uPxX, uPxY, 18, 0, Math.PI * 2); ctx.fill();
 
-        ctx.fillStyle = "#d50000";
-        ctx.font = "bold 11px sans-serif";
+        ctx.beginPath(); ctx.arc(uPxX, uPxY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#2ef2d8"; ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px monospace";
         ctx.textAlign = uPxX > half ? "right" : "left";
-        ctx.fillText("Вы", uPxX + (uPxX > half ? -9 : 9), uPxY + 4);
+        ctx.fillText("вы", uPxX + (uPxX > half ? -10 : 10), uPxY + 4);
+    }
+
+    function openExternalLink(url) {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        if (tg && typeof tg.openTelegramLink === 'function') {
+            tg.openTelegramLink(url);
+        } else {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
     }
 
     function shareResult() {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         const text = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты:`;
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(text)}`;
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_SHARE_URL)}&text=${encodeURIComponent(text)}`;
         tg.openTelegramLink(shareUrl);
     }
 
-    // Функция для шеринга чистой ссылки на квиз
     function shareQuizLink() {
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        const text = `Пройди крутой тест «Политический компас» и узнай своего политического двойника!`;
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(text)}`;
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        const text = `Пройди тест «Политические координаты» и узнай своего политического двойника!`;
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_SHARE_URL)}&text=${encodeURIComponent(text)}`;
         tg.openTelegramLink(shareUrl);
     }
 
     function saveCompassImage() {
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         const canvas = document.getElementById("compassCanvas");
-        
+
         canvas.toBlob(async (blob) => {
             if (!blob) return alert("Не удалось создать изображение.");
             const file = new File([blob], "political-compass.png", { type: "image/png" });
@@ -487,7 +900,7 @@
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
-                        title: 'Мой политический компас',
+                        title: 'Мои политические координаты',
                         text: `Мой политический двойник — ${finalMatch.name}!`,
                         files: [file]
                     });
@@ -510,15 +923,15 @@
     }
 
     function restartQuiz() {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         currentQ = 0;
-        scoreX = 0;
-        scoreY = 0;
+        userAnswers = new Array(QUESTIONS.length).fill(null);
         document.getElementById("result-screen").classList.add("hidden");
-        document.getElementById("quiz-screen").classList.remove("hidden");
-        renderQuestion();
+        document.getElementById("start-screen").classList.remove("hidden");
     }
 
-    renderQuestion();
+    initMarquee();
+    initProgressBar();
 </script>
 
 </body>
