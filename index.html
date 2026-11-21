@@ -858,7 +858,6 @@
         drawSharePosterCard(userX, userY, bestMatch, null);
     }
 
-    // Умный подбор позиции подписи вокруг точки, чтобы фамилии не наезжали друг на друга и на края
     function placePointLabel(ctx, text, px, py, fontSize, bounds, occupiedRects, preferredSide) {
         ctx.font = `700 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
         const w = ctx.measureText(text).width;
@@ -974,7 +973,6 @@
         const pPxX = toPxX(politician.x);
         const pPxY = toPxY(politician.y);
 
-        // Резервируем зоны подписей осей и точки "ВЫ", чтобы фамилии на них не наезжали
         const occupiedRects = [
             { left: half - 46, top: 2, right: half + 46, bottom: 18 },
             { left: half - 32, top: size - 18, right: half + 32, bottom: size - 2 },
@@ -984,7 +982,6 @@
         ];
         const bounds = { left: 5, right: size - 5, top: 18, bottom: size - 16 };
 
-        // Пунктирная связь между пользователем и двойником
         ctx.save();
         ctx.setLineDash([4, 3]);
         ctx.strokeStyle = "rgba(46, 242, 216, 0.65)";
@@ -995,7 +992,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // Сначала рисуем все точки политиков
         for (const pol of POLITICIANS) {
             const isMatch = pol.name === politician.name;
             const px = toPxX(pol.x);
@@ -1010,7 +1006,6 @@
             ctx.stroke();
         }
 
-        // Подписываем двойника первым (приоритетная позиция)
         const matchLabel = getLastName(politician.name);
         const matchPos = placePointLabel(
             ctx, matchLabel, pPxX, pPxY, 10, bounds, occupiedRects,
@@ -1020,7 +1015,6 @@
         ctx.textAlign = matchPos.align;
         drawCrispBadgeLabel(ctx, matchLabel, matchPos.tx, matchPos.ty, "#f5b82e", "#0e1115");
 
-        // Подписываем всех остальных политиков
         for (const pol of POLITICIANS) {
             if (pol.name === politician.name) continue;
             const px = toPxX(pol.x);
@@ -1035,7 +1029,6 @@
             drawCrispBadgeLabel(ctx, label, pos.tx, pos.ty, "rgba(235, 235, 242, 0.9)", "#0e1115");
         }
 
-        // Точка пользователя поверх всего
         ctx.beginPath();
         ctx.arc(uPxX, uPxY, 6, 0, Math.PI * 2);
         ctx.fillStyle = "#2ef2d8";
@@ -1249,7 +1242,6 @@
         const pX = mapX(politician.x);
         const pY = mapY(politician.y);
 
-        // Занятые зоны для подписей внутри координатной сетки карточки
         const posterOccupied = [
             { left: gLeft, top: gCenterY - 22, right: gLeft + 52, bottom: gCenterY + 6 },
             { left: gLeft + gWidth - 58, top: gCenterY - 22, right: gLeft + gWidth, bottom: gCenterY + 6 },
@@ -1262,7 +1254,6 @@
             bottom: gTop + gHeight - 4
         };
 
-        // Все точки политиков на сетке карточки
         for (const pol of POLITICIANS) {
             const isMatch = pol.name === politician.name;
             const px = mapX(pol.x);
@@ -1279,7 +1270,6 @@
             }
         }
 
-        // Подпись двойника на сетке карточки
         const pCardLabel = getLastName(politician.name);
         const pCardPos = placePointLabel(
             ctx, pCardLabel, pX, pY, 11, posterBounds, posterOccupied,
@@ -1289,7 +1279,6 @@
         ctx.textAlign = pCardPos.align;
         drawCrispBadgeLabel(ctx, pCardLabel, pCardPos.tx, pCardPos.ty, posterInk, posterCream);
 
-        // Подписи остальных серых точек на сетке карточки (некрупно)
         for (const pol of POLITICIANS) {
             if (pol.name === politician.name) continue;
             const px = mapX(pol.x);
@@ -1304,7 +1293,6 @@
             drawCrispBadgeLabel(ctx, label, pos.tx, pos.ty, "rgba(20, 18, 18, 0.72)", posterCream);
         }
 
-        // Линия между пользователем и политиком
         ctx.save();
         ctx.setLineDash([4, 4]);
         ctx.strokeStyle = posterRed;
@@ -1315,7 +1303,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // Точка пользователя
         ctx.beginPath();
         ctx.arc(uX, uY, 8, 0, Math.PI * 2);
         ctx.fillStyle = posterRed;
@@ -1328,7 +1315,6 @@
         ctx.textAlign = uX > gCenterX ? "right" : "left";
         drawCrispBadgeLabel(ctx, "ВЫ", uX + (uX > gCenterX ? -12 : 12), uY + 4, posterRed, posterCream);
 
-        // Фамилия в самом низу карточки
         ctx.textBaseline = "middle";
         const lastNameUpper = getLastName(politician.name).toUpperCase();
         let surnameFontSize = 64;
@@ -1361,46 +1347,13 @@
 
     function shareResult() {
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        const canvas = document.getElementById("shareCardCanvas");
-        const shareText = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты: ${BOT_SHARE_URL}`;
-
-        canvas.toBlob(async (blob) => {
-            if (blob) {
-                const file = new File([blob], "political-twin-card.png", { type: "image/png" });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            title: "Ваш политический двойник",
-                            text: shareText,
-                            files: [file]
-                        });
-                        return;
-                    } catch (err) {
-                        if (err.name === "AbortError") return;
-                        console.log("Web Share fallback:", err);
-                    }
-                }
-
-                // Fallback для клиентов без поддержки отправки файлов через navigator.share:
-                // сохраняем карточку в загрузки и открываем окно отправки текста в Telegram
-                const dataUrl = canvas.toDataURL("image/png");
-                const link = document.createElement("a");
-                link.href = dataUrl;
-                link.download = "political-twin-card.png";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-
-            const shortText = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты:`;
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_SHARE_URL)}&text=${encodeURIComponent(shortText)}`;
-            if (tg && typeof tg.openTelegramLink === "function") {
-                tg.openTelegramLink(shareUrl);
-            } else {
-                window.open(shareUrl, "_blank", "noopener,noreferrer");
-            }
-        }, "image/png");
+        const text = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты:`;
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_SHARE_URL)}&text=${encodeURIComponent(text)}`;
+        if (tg && typeof tg.openTelegramLink === 'function') {
+            tg.openTelegramLink(shareUrl);
+        } else {
+            window.open(shareUrl, '_blank', 'noopener,noreferrer');
+        }
     }
 
     function shareQuizLink() {
