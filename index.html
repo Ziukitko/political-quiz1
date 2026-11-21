@@ -335,8 +335,8 @@
         }
 
         #compassCanvas {
-            width: 290px;
-            height: 290px;
+            width: 310px;
+            height: 310px;
             border-radius: 16px;
             border: 1px solid rgba(46, 242, 216, 0.28);
             box-shadow: 0 0 28px rgba(46, 242, 216, 0.1);
@@ -535,7 +535,7 @@
         <div class="result-top-title">Твои политические координаты</div>
 
         <div class="canvas-wrapper">
-            <canvas id="compassCanvas" width="290" height="290"></canvas>
+            <canvas id="compassCanvas" width="310" height="310"></canvas>
         </div>
 
         <div class="poster-wrapper">
@@ -647,6 +647,7 @@
     }
 
     function getLastName(fullName) {
+        if (fullName === "Марин Ле Пен") return "Ле Пен";
         const parts = fullName.trim().split(/\s+/);
         return parts[parts.length - 1] || fullName;
     }
@@ -857,9 +858,71 @@
         drawSharePosterCard(userX, userY, bestMatch, null);
     }
 
+    // Умный подбор позиции подписи вокруг точки, чтобы фамилии не наезжали друг на друга и на края
+    function placePointLabel(ctx, text, px, py, fontSize, bounds, occupiedRects, preferredSide) {
+        ctx.font = `700 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+        const w = ctx.measureText(text).width;
+        const h = fontSize + 2;
+
+        const candidates = [];
+        const rightFirst = preferredSide === "right";
+
+        if (rightFirst) {
+            candidates.push({ dx: 6, dy: 3, align: "left" });
+            candidates.push({ dx: -6, dy: 3, align: "right" });
+        } else {
+            candidates.push({ dx: -6, dy: 3, align: "right" });
+            candidates.push({ dx: 6, dy: 3, align: "left" });
+        }
+        candidates.push({ dx: 0, dy: -7, align: "center" });
+        candidates.push({ dx: 0, dy: h + 4, align: "center" });
+        candidates.push({ dx: 6, dy: -5, align: "left" });
+        candidates.push({ dx: -6, dy: -5, align: "right" });
+        candidates.push({ dx: 6, dy: h + 2, align: "left" });
+        candidates.push({ dx: -6, dy: h + 2, align: "right" });
+
+        let bestChoice = null;
+        let bestPenalty = Infinity;
+
+        for (const cand of candidates) {
+            const tx = px + cand.dx;
+            const ty = py + cand.dy;
+            let left = tx;
+            if (cand.align === "right") left = tx - w;
+            if (cand.align === "center") left = tx - w / 2;
+            const top = ty - fontSize + 1;
+            const right = left + w;
+            const bottom = top + h;
+
+            let penalty = 0;
+
+            if (left < bounds.left) penalty += (bounds.left - left) * 20;
+            if (right > bounds.right) penalty += (right - bounds.right) * 20;
+            if (top < bounds.top) penalty += (bounds.top - top) * 20;
+            if (bottom > bounds.bottom) penalty += (bottom - bounds.bottom) * 20;
+
+            for (const r of occupiedRects) {
+                const overlapX = Math.max(0, Math.min(right + 2, r.right) - Math.max(left - 2, r.left));
+                const overlapY = Math.max(0, Math.min(bottom + 1, r.bottom) - Math.max(top - 1, r.top));
+                if (overlapX > 0 && overlapY > 0) {
+                    penalty += overlapX * overlapY * 5 + 40;
+                }
+            }
+
+            if (penalty < bestPenalty) {
+                bestPenalty = penalty;
+                bestChoice = { tx, ty, align: cand.align, rect: { left, top, right, bottom } };
+            }
+            if (penalty === 0) break;
+        }
+
+        occupiedRects.push(bestChoice.rect);
+        return bestChoice;
+    }
+
     function drawDarkCompass(userX, userY, politician) {
         const canvas = document.getElementById("compassCanvas");
-        const size = 290;
+        const size = 310;
         const ctx = setupHiDPICanvas(canvas, size, size);
         const half = size / 2;
 
@@ -882,7 +945,7 @@
         }
 
         const axisMid = snapCoord(half);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(axisMid, 20);
@@ -903,28 +966,25 @@
         ctx.textAlign = "right";
         ctx.fillText("ПРАВЫЕ", size - 8, half - 6);
 
-        const toPxX = (x) => half + (x / 10) * (half - 24);
-        const toPxY = (y) => half - (y / 10) * (half - 24);
+        const toPxX = (x) => half + (x / 10) * (half - 26);
+        const toPxY = (y) => half - (y / 10) * (half - 26);
 
         const uPxX = toPxX(userX);
         const uPxY = toPxY(userY);
         const pPxX = toPxX(politician.x);
         const pPxY = toPxY(politician.y);
 
-        for (const pol of POLITICIANS) {
-            if (pol.name === politician.name) continue;
-            const px = toPxX(pol.x);
-            const py = toPxY(pol.y);
+        // Резервируем зоны подписей осей и точки "ВЫ", чтобы фамилии на них не наезжали
+        const occupiedRects = [
+            { left: half - 46, top: 2, right: half + 46, bottom: 18 },
+            { left: half - 32, top: size - 18, right: half + 32, bottom: size - 2 },
+            { left: 4, top: half - 18, right: 48, bottom: half + 4 },
+            { left: size - 52, top: half - 18, right: size - 4, bottom: half + 4 },
+            { left: uPxX - 18, top: uPxY - 12, right: uPxX + 24, bottom: uPxY + 12 }
+        ];
+        const bounds = { left: 5, right: size - 5, top: 18, bottom: size - 16 };
 
-            ctx.beginPath();
-            ctx.arc(px, py, 3.2, 0, Math.PI * 2);
-            ctx.fillStyle = "#f5b82e";
-            ctx.fill();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = "#0e1115";
-            ctx.stroke();
-        }
-
+        // Пунктирная связь между пользователем и двойником
         ctx.save();
         ctx.setLineDash([4, 3]);
         ctx.strokeStyle = "rgba(46, 242, 216, 0.65)";
@@ -935,21 +995,47 @@
         ctx.stroke();
         ctx.restore();
 
-        ctx.beginPath();
-        ctx.arc(pPxX, pPxY, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#f5b82e";
-        ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = "#0e1115";
-        ctx.stroke();
+        // Сначала рисуем все точки политиков
+        for (const pol of POLITICIANS) {
+            const isMatch = pol.name === politician.name;
+            const px = toPxX(pol.x);
+            const py = toPxY(pol.y);
 
-        const shortName = getLastName(politician.name);
-        ctx.font = "700 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.textAlign = pPxX > half ? "right" : "left";
-        const pLabelX = pPxX + (pPxX > half ? -8 : 8);
-        const pLabelY = pPxY < 28 ? pPxY + 13 : pPxY - 5;
-        drawCrispBadgeLabel(ctx, shortName, pLabelX, pLabelY, "#f5b82e", "#0e1115");
+            ctx.beginPath();
+            ctx.arc(px, py, isMatch ? 5 : 3.2, 0, Math.PI * 2);
+            ctx.fillStyle = isMatch ? "#f5b82e" : "rgba(245, 184, 46, 0.85)";
+            ctx.fill();
+            ctx.lineWidth = isMatch ? 1.5 : 1;
+            ctx.strokeStyle = "#0e1115";
+            ctx.stroke();
+        }
 
+        // Подписываем двойника первым (приоритетная позиция)
+        const matchLabel = getLastName(politician.name);
+        const matchPos = placePointLabel(
+            ctx, matchLabel, pPxX, pPxY, 10, bounds, occupiedRects,
+            pPxX > half ? "left" : "right"
+        );
+        ctx.font = "800 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = matchPos.align;
+        drawCrispBadgeLabel(ctx, matchLabel, matchPos.tx, matchPos.ty, "#f5b82e", "#0e1115");
+
+        // Подписываем всех остальных политиков
+        for (const pol of POLITICIANS) {
+            if (pol.name === politician.name) continue;
+            const px = toPxX(pol.x);
+            const py = toPxY(pol.y);
+            const label = getLastName(pol.name);
+            const pos = placePointLabel(
+                ctx, label, px, py, 8.5, bounds, occupiedRects,
+                px > half ? "left" : "right"
+            );
+            ctx.font = "600 8.5px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            ctx.textAlign = pos.align;
+            drawCrispBadgeLabel(ctx, label, pos.tx, pos.ty, "rgba(235, 235, 242, 0.9)", "#0e1115");
+        }
+
+        // Точка пользователя поверх всего
         ctx.beginPath();
         ctx.arc(uPxX, uPxY, 6, 0, Math.PI * 2);
         ctx.fillStyle = "#2ef2d8";
@@ -1104,7 +1190,7 @@
         ctx.lineWidth = 3;
         ctx.strokeRect(rightBoxX, centerTop, rightBoxW, centerHeight);
 
-        const gPadX = 22;
+        const gPadX = 20;
         const gPadY = 38;
         const gLeft = rightBoxX + gPadX;
         const gTop = centerTop + gPadY;
@@ -1145,6 +1231,7 @@
 
         ctx.fillStyle = posterInk;
         ctx.font = "800 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textBaseline = "alphabetic";
         ctx.textAlign = "center";
         ctx.fillText("АВТОРИТАРИЗМ", gCenterX, gTop - 12);
         ctx.fillText("СВОБОДА", gCenterX, gTop + gHeight + 20);
@@ -1154,17 +1241,36 @@
         ctx.textAlign = "right";
         ctx.fillText("ПРАВЫЕ", gLeft + gWidth, gCenterY - 8);
 
-        const mapX = (x) => gCenterX + (x / 10) * (gWidth / 2 - 10);
-        const mapY = (y) => gCenterY - (y / 10) * (gHeight / 2 - 10);
+        const mapX = (x) => gCenterX + (x / 10) * (gWidth / 2 - 12);
+        const mapY = (y) => gCenterY - (y / 10) * (gHeight / 2 - 12);
 
+        const uX = mapX(userX);
+        const uY = mapY(userY);
+        const pX = mapX(politician.x);
+        const pY = mapY(politician.y);
+
+        // Занятые зоны для подписей внутри координатной сетки карточки
+        const posterOccupied = [
+            { left: gLeft, top: gCenterY - 22, right: gLeft + 52, bottom: gCenterY + 6 },
+            { left: gLeft + gWidth - 58, top: gCenterY - 22, right: gLeft + gWidth, bottom: gCenterY + 6 },
+            { left: uX - 20, top: uY - 14, right: uX + 26, bottom: uY + 14 }
+        ];
+        const posterBounds = {
+            left: gLeft + 2,
+            right: gLeft + gWidth - 2,
+            top: gTop + 6,
+            bottom: gTop + gHeight - 4
+        };
+
+        // Все точки политиков на сетке карточки
         for (const pol of POLITICIANS) {
             const isMatch = pol.name === politician.name;
             const px = mapX(pol.x);
             const py = mapY(pol.y);
 
             ctx.beginPath();
-            ctx.arc(px, py, isMatch ? 7 : 4, 0, Math.PI * 2);
-            ctx.fillStyle = isMatch ? posterInk : "rgba(20, 18, 18, 0.45)";
+            ctx.arc(px, py, isMatch ? 6.5 : 3.8, 0, Math.PI * 2);
+            ctx.fillStyle = isMatch ? posterInk : "rgba(20, 18, 18, 0.5)";
             ctx.fill();
             if (isMatch) {
                 ctx.lineWidth = 2;
@@ -1173,11 +1279,32 @@
             }
         }
 
-        const uX = mapX(userX);
-        const uY = mapY(userY);
-        const pX = mapX(politician.x);
-        const pY = mapY(politician.y);
+        // Подпись двойника на сетке карточки
+        const pCardLabel = getLastName(politician.name);
+        const pCardPos = placePointLabel(
+            ctx, pCardLabel, pX, pY, 11, posterBounds, posterOccupied,
+            pX > gCenterX ? "left" : "right"
+        );
+        ctx.font = "800 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = pCardPos.align;
+        drawCrispBadgeLabel(ctx, pCardLabel, pCardPos.tx, pCardPos.ty, posterInk, posterCream);
 
+        // Подписи остальных серых точек на сетке карточки (некрупно)
+        for (const pol of POLITICIANS) {
+            if (pol.name === politician.name) continue;
+            const px = mapX(pol.x);
+            const py = mapY(pol.y);
+            const label = getLastName(pol.name);
+            const pos = placePointLabel(
+                ctx, label, px, py, 9.5, posterBounds, posterOccupied,
+                px > gCenterX ? "left" : "right"
+            );
+            ctx.font = "600 9.5px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            ctx.textAlign = pos.align;
+            drawCrispBadgeLabel(ctx, label, pos.tx, pos.ty, "rgba(20, 18, 18, 0.72)", posterCream);
+        }
+
+        // Линия между пользователем и политиком
         ctx.save();
         ctx.setLineDash([4, 4]);
         ctx.strokeStyle = posterRed;
@@ -1188,6 +1315,7 @@
         ctx.stroke();
         ctx.restore();
 
+        // Точка пользователя
         ctx.beginPath();
         ctx.arc(uX, uY, 8, 0, Math.PI * 2);
         ctx.fillStyle = posterRed;
@@ -1200,6 +1328,8 @@
         ctx.textAlign = uX > gCenterX ? "right" : "left";
         drawCrispBadgeLabel(ctx, "ВЫ", uX + (uX > gCenterX ? -12 : 12), uY + 4, posterRed, posterCream);
 
+        // Фамилия в самом низу карточки
+        ctx.textBaseline = "middle";
         const lastNameUpper = getLastName(politician.name).toUpperCase();
         let surnameFontSize = 64;
         ctx.font = `900 ${surnameFontSize}px -apple-system, BlinkMacSystemFont, 'Arial Narrow', 'Roboto Condensed', sans-serif`;
@@ -1231,9 +1361,46 @@
 
     function shareResult() {
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        const text = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты:`;
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_SHARE_URL)}&text=${encodeURIComponent(text)}`;
-        tg.openTelegramLink(shareUrl);
+        const canvas = document.getElementById("shareCardCanvas");
+        const shareText = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты: ${BOT_SHARE_URL}`;
+
+        canvas.toBlob(async (blob) => {
+            if (blob) {
+                const file = new File([blob], "political-twin-card.png", { type: "image/png" });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            title: "Ваш политический двойник",
+                            text: shareText,
+                            files: [file]
+                        });
+                        return;
+                    } catch (err) {
+                        if (err.name === "AbortError") return;
+                        console.log("Web Share fallback:", err);
+                    }
+                }
+
+                // Fallback для клиентов без поддержки отправки файлов через navigator.share:
+                // сохраняем карточку в загрузки и открываем окно отправки текста в Telegram
+                const dataUrl = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                link.href = dataUrl;
+                link.download = "political-twin-card.png";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            const shortText = `Мой политический двойник — ${finalMatch.name} (Экономика: ${finalCoords.x}, Власть: ${finalCoords.y})! Пройди тест и узнай, кто ты:`;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_SHARE_URL)}&text=${encodeURIComponent(shortText)}`;
+            if (tg && typeof tg.openTelegramLink === "function") {
+                tg.openTelegramLink(shareUrl);
+            } else {
+                window.open(shareUrl, "_blank", "noopener,noreferrer");
+            }
+        }, "image/png");
     }
 
     function shareQuizLink() {
