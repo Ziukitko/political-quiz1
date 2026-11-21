@@ -15,6 +15,9 @@
             --accent: #f5b82e;
             --accent-glow: rgba(245, 184, 46, 0.35);
             --neon-cyan: #2ef2d8;
+            --poster-red: #f4220a;
+            --poster-cream: #e5dfd3;
+            --poster-ink: #141212;
         }
 
         * {
@@ -118,11 +121,11 @@
         }
 
         .marquee-row.left {
-            animation: scrollLeft 28s linear infinite;
+            animation: scrollLeft 30s linear infinite;
         }
 
         .marquee-row.right {
-            animation: scrollRight 32s linear infinite;
+            animation: scrollRight 34s linear infinite;
         }
 
         .marquee-card {
@@ -331,12 +334,30 @@
             margin-bottom: 16px;
         }
 
-        canvas {
+        #compassCanvas {
+            width: 290px;
+            height: 290px;
             border-radius: 16px;
             border: 1px solid rgba(46, 242, 216, 0.28);
             box-shadow: 0 0 28px rgba(46, 242, 216, 0.1);
-            max-width: 100%;
-            height: auto;
+            display: block;
+        }
+
+        .poster-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        #shareCardCanvas {
+            width: 100%;
+            max-width: 448px;
+            aspect-ratio: 4 / 5;
+            border-radius: 14px;
+            border: 2px solid var(--poster-ink);
+            box-shadow: 0 12px 30px rgba(244, 34, 10, 0.22);
+            display: block;
+            background-color: var(--poster-red);
         }
 
         .match-card {
@@ -454,7 +475,7 @@
         <div>
             <div class="start-top-meta">
                 <span class="pulse-dot"></span>
-                <span>ТЕСТ · 27 ВОПРОСОВ · 16 ПОЛИТИКОВ</span>
+                <span id="start-meta-text">ТЕСТ · 27 ВОПРОСОВ · 19 ПОЛИТИКОВ</span>
             </div>
             <h1 class="start-title">Политические<br>координаты</h1>
             <p class="start-subtitle">Узнай своё точное место на карте идеологий и выясни, кто из исторических и современных лидеров — твой двойник.</p>
@@ -517,6 +538,10 @@
             <canvas id="compassCanvas" width="290" height="290"></canvas>
         </div>
 
+        <div class="poster-wrapper">
+            <canvas id="shareCardCanvas" width="800" height="1000"></canvas>
+        </div>
+
         <div class="match-card">
             <img id="res-img" src="" alt="Политик" class="politician-photo">
             <div class="match-info">
@@ -529,7 +554,7 @@
 
         <div class="action-buttons">
             <button class="btn-action-primary" onclick="shareResult()">поделиться результатом</button>
-            <button class="btn-action-secondary" onclick="saveCompassImage()">сохранить график (PNG)</button>
+            <button class="btn-action-secondary" onclick="saveCompassImage()">сохранить карточку (PNG)</button>
             <button class="btn-action-secondary" onclick="openExternalLink('https://t.me/doxajournal')">Новые тесты будут тут</button>
             <button class="btn-action-secondary" onclick="restartQuiz()">пройти тест заново</button>
         </div>
@@ -547,22 +572,25 @@
     const BOT_SHARE_URL = "https://t.me/ultimate_politician_bot";
 
     const POLITICIANS = [
-        { name: "Владимир Ленин", x: -9.5, y: 9.0, img: "https://upload.wikimedia.org/wikipedia/commons/1/1f/Vladimir_Lenin_in_July_1920_by_Pavel_Zhukov.jpg", desc: "Вы — Владимир Ленин! Вы поддерживаете идею радикального переустройства общества через устранение классовых различий. Но для начала придется действовать жестко..." },
-        { name: "Александра Коллонтай", x: -8.0, y: 5.5, img: "https://upload.wikimedia.org/wikipedia/commons/e/ed/Aleksandra_Kollontai.jpg", desc: "Вы — Александра Коллонтай, первая женщина-министр! Вы боретесь за полную эмансипацию женщин, критикуете современный брак, основанный на экономическом расчете и церковно-государственном давлении. Также вы продвигаете оплачиваемые отпуска по беременности и легализацию абортов." },
-        { name: "Роза Люксембург", x: -8.5, y: 2.5, img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Rosa_Luxemburg_%2827675721178%29.jpg", desc: "Вы — Роза Люксембург! Вы выступаете за экономическое равенство и демократию на рабочем месте, свободу дискуссий и ликвидацию бюрократизма." },
-        { name: "Индира Ганди", x: -4.5, y: 5.0, img: "https://upload.wikimedia.org/wikipedia/commons/a/a1/Indira_Gandhi_official_portrait.png", desc: "Вы — Индира Ганди: прагматичный этатист, вы поддерживаете сильную роль государства в экономике и жесткую вертикаль для сохранения порядка." },
-        { name: "Петр Кропоткин", x: -9.5, y: -9.5, img: "https://upload.wikimedia.org/wikipedia/commons/b/bb/Kropotkin1.jpg", desc: "Вы — Петр Кропоткин, идеолог анархо-коммунизма! Вы выступаете против частной собственности, за самоорганизацию и отказ от государства." },
-        { name: "Субкоманданте Маркос", x: -7.0, y: -6.5, img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Sub_Marcos.jpg", desc: "Вы — мексиканский политик субкоманданте Маркос! В мире победившего капитализма вы видите альтернативу в идеалах низового самоуправления, автономии общин, антиглобализма и справедливого распределения ресурсов без давления централизованной власти." },
-        { name: "Зохран Мамдани", x: -6.0, y: -3.5, img: "https://upload.wikimedia.org/wikipedia/commons/2/25/Zohran_Mamdani_05.25.25_%28b%29.jpg", desc: "Вы — мэр Нью-Йорка Зохран Мамдани, демократический социалист! Вы верите, что город и экономика должны работать для обычных людей, а не для миллиардеров и корпораций. Заморозка аренды, бесплатный транспорт, защита прав мигрантов и гражданских свобод — ваши главные приоритеты." },
-        { name: "Франклин Рузвельт", x: -2.5, y: 1.0, img: "https://upload.wikimedia.org/wikipedia/commons/4/42/FDR_1944_Color_Portrait.jpg", desc: "Вы — президент США Франклин Рузвельт, понимающий, что капитализм барахлит и его надо чинить. Вы верите, что капитализм может работать на благо общества, если государство вовремя вмешивается, регулирует рынок и защищает слабых. Еще вы не против посотрудничать со Сталиным ради общего блага." },
-        { name: "Ангела Меркель", x: 1.5, y: -1.5, img: "https://upload.wikimedia.org/wikipedia/commons/8/82/Angela_Merkel_2023_%28cropped%29.jpg", desc: "Вы — канцлерка Германии Ангела Меркель! Капитализм повсюду, но, чтобы не раскачивать лодку, вы вкладываетесь в социальную политику и поддерживаете иммиграцию. Стабильность, компромиссы и умеренность — ваш девиз." },
-        { name: "Эммануэль Макрон", x: 3.5, y: -2.5, img: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Emmanuel_Macron_2025_%28cropped%29.jpg", desc: "Вы — президент Франции Эммануэль Макрон! Вы определяете себя как центрист, лавирующий между правыми и левыми. В международной политике вы возвращаете величие Франции, продвигая ее интересы во всех уголках мира. Когда речь заходит о внутренней политике, вы можете обойти решения парламента и решить не идти на поводу у протестующих, потому что президент должен быть сильным." },
-        { name: "Бенито Муссолини", x: 0.5, y: 9.0, img: "https://upload.wikimedia.org/wikipedia/commons/3/38/Duce_Benito_Mussolini.jpg", desc: "Вы — Муссолини... Государственные интересы для вас выше личных интересов граждан. Вы считаете, что сделаете Италию такой же великой, какой была Римская империя, но у вас это не получится." },
-        { name: "Владимир Путин", x: 1.5, y: 7.0, img: "https://upload.wikimedia.org/wikipedia/commons/1/1c/Vladimir_Putin_%282026_02_23%29_%28cropped%29.jpg", desc: "Вы — Путин... Сильная рука, коррупция, бессмысленные войны — это про вас. На публике вы жалеете о распаде СССР, но при вас богатеют олигархи, а обычные люди становятся беднее." },
-        { name: "Марин Ле Пен", x: 2.5, y: 4.5, img: "https://upload.wikimedia.org/wikipedia/commons/8/81/Marine_Le_Pen_2025_%28cropped%29.jpg", desc: "Вы — ультраправая популистка Марин Ле Пен. Возвращение величие своей страны вы видите в противостоянии миграции и традиционных ценностях." },
-        { name: "Аугусто Пиночет", x: 8.0, y: 9.5, img: "https://upload.wikimedia.org/wikipedia/commons/f/ff/Augusto_Pinochet_foto_oficial.jpg", desc: "Вы — чилийский диктатор Аугусто Пиночет. Вы не против прийти к власти в результате военного переворота при поддержке США, сместив демократически избранного лидера страны. Вы арестовываете всех, кто с вами не согласен, и защищаете интересы крупного бизнеса (прежде всего американского)." },
-        { name: "Дональд Трамп", x: 5.5, y: 2.5, img: "https://upload.wikimedia.org/wikipedia/commons/1/16/Official_Presidential_Portrait_of_President_Donald_J._Trump_%282025%29.jpg", desc: "Вы — ДОНАЛЬД ТРАМП!!! При вас стало небезопасно ходить по улицам, потому что могут арестовать и забрать в миграционную тюрьму. Вы обещали, что будете продвигать мир во всем мире, но начинаете еще одну войну. Интересы крупных корпораций для вас важнее всего, потому что даже вам хочется заработать побольше денег. При этом вы говорите, что защищаете интересы простых людей." },
-        { name: "Маргарет Тэтчер", x: 8.0, y: 3.0, img: "https://upload.wikimedia.org/wikipedia/commons/3/3d/Margaret_Thatcher_stock_portrait_%28cropped%29.jpg", desc: "Вы — глава правительства Великобритании Маргарет Тэтчер, сторонница свободного рынка. Проблемы страны вы видите в профсоюзах, поэтому решаете бороться с ними, попутно лишая тысячи людей их рабочих мест. Когда напряжение в стране нарастает, вы воюете за отдаленные острова, о которых почти никто в вашей стране не слышал." }
+        { name: "Владимир Ленин", x: -9.5, y: 9.0, img: "./images/lenin.jpg", desc: "Вы — Владимир Ленин! Вы поддерживаете идею радикального переустройства общества через устранение классовых различий. Но для начала придется действовать жестко..." },
+        { name: "Александра Коллонтай", x: -8.0, y: 5.5, img: "./images/kollontai.jpg", desc: "Вы — Александра Коллонтай, первая женщина-министр! Вы боретесь за полную эмансипацию женщин, критикуете современный брак, основанный на экономическом расчете и церковно-государственном давлении. Также вы продвигаете оплачиваемые отпуска по беременности и легализацию абортов." },
+        { name: "Роза Люксембург", x: -8.5, y: 2.5, img: "./images/luxemburg.jpg", desc: "Вы — Роза Люксембург! Вы выступаете за экономическое равенство и демократию на рабочем месте, свободу дискуссий и ликвидацию бюрократизма." },
+        { name: "Индира Ганди", x: -4.5, y: 5.0, img: "./images/gandhi.jpg", desc: "Вы — Индира Ганди: прагматичный этатист, вы поддерживаете сильную роль государства в экономике и жесткую вертикаль для сохранения порядка." },
+        { name: "Петр Кропоткин", x: -9.5, y: -9.5, img: "./images/kropotkin.jpg", desc: "Вы — Петр Кропоткин, идеолог анархо-коммунизма! Вы выступаете против частной собственности, за самоорганизацию и отказ от государства." },
+        { name: "Субкоманданте Маркос", x: -7.0, y: -6.5, img: "./images/marcos.jpg", desc: "Вы — мексиканский политик субкоманданте Маркос! В мире победившего капитализма вы видите альтернативу в идеалах низового самоуправления, автономии общин, антиглобализма и справедливого распределения ресурсов без давления централизованной власти." },
+        { name: "Зохран Мамдани", x: -6.0, y: -3.5, img: "./images/mamdani.jpg", desc: "Вы — мэр Нью-Йорка Зохран Мамдани, демократический социалист! Вы верите, что город и экономика должны работать для обычных людей, а не для миллиардеров и корпораций. Заморозка аренды, бесплатный транспорт, защита прав мигрантов и гражданских свобод — ваши главные приоритеты." },
+        { name: "Александрия Окасио-Кортес", x: -5.0, y: -4.0, img: "./images/aoc.jpg", desc: "Вы — конгрессвумен Александрия Окасио-Кортес! Вы представляете новое поколение левых прогрессистов: вы выступаете за зелёную экономику, повышенные налоги на корпорации, доступное жильё и бескомпромиссную защиту гражданских свобод." },
+        { name: "Франклин Рузвельт", x: -2.5, y: 1.0, img: "./images/roosevelt.jpg", desc: "Вы — президент США Франклин Рузвельт, понимающий, что капитализм барахлит и его надо чинить. Вы верите, что капитализм может работать на благо общества, если государство вовремя вмешивается, регулирует рынок и защищает слабых. Еще вы не против посотрудничать со Сталиным ради общего блага." },
+        { name: "Ангела Меркель", x: 1.5, y: -1.5, img: "./images/merkel.jpg", desc: "Вы — канцлерка Германии Ангела Меркель! Капитализм повсюду, но, чтобы не раскачивать лодку, вы вкладываетесь в социальную политику и поддерживаете иммиграцию. Стабильность, компромиссы и умеренность — ваш девиз." },
+        { name: "Эммануэль Макрон", x: 3.5, y: -2.5, img: "./images/macron.jpg", desc: "Вы — президент Франции Эммануэль Макрон! Вы определяете себя как центрист, лавирующий между правыми и левыми. В международной политике вы возвращаете величие Франции, продвигая ее интересы во всех уголках мира. Когда речь заходит о внутренней политике, вы можете обойти решения парламента и решить не идти на поводу у протестующих, потому что президент должен быть сильным." },
+        { name: "Бенито Муссолини", x: 0.5, y: 9.0, img: "./images/mussolini.jpg", desc: "Вы — Муссолини... Государственные интересы для вас выше личных интересов граждан. Вы считаете, что сделаете Италию такой же великой, какой была Римская империя, но у вас это не получится." },
+        { name: "Владимир Путин", x: 1.5, y: 7.0, img: "./images/putin.jpg", desc: "Вы — Путин... Сильная рука, коррупция, бессмысленные войны — это про вас. На публике вы жалеете о распаде СССР, но при вас богатеют олигархи, а обычные люди становятся беднее." },
+        { name: "Марин Ле Пен", x: 2.5, y: 4.5, img: "./images/lepen.jpg", desc: "Вы — ультраправая популистка Марин Ле Пен. Возвращение величие своей страны вы видите в противостоянии миграции и традиционных ценностях." },
+        { name: "Аугусто Пиночет", x: 8.0, y: 9.5, img: "./images/pinochet.jpg", desc: "Вы — чилийский диктатор Аугусто Пиночет. Вы не против прийти к власти в результате военного переворота при поддержке США, сместив демократически избранного лидера страны. Вы арестовываете всех, кто с вами не согласен, и защищаете интересы крупного бизнеса (прежде всего американского)." },
+        { name: "Дональд Трамп", x: 5.5, y: 2.5, img: "./images/trump.jpg", desc: "Вы — ДОНАЛЬД ТРАМП!!! При вас стало небезопасно ходить по улицам, потому что могут арестовать и забрать в миграционную тюрьму. Вы обещали, что будете продвигать мир во всем мире, но начинаете еще одну войну. Интересы крупных корпораций для вас важнее всего, потому что даже вам хочется заработать побольше денег. При этом вы говорите, что защищаете интересы простых людей." },
+        { name: "Маргарет Тэтчер", x: 8.0, y: 3.0, img: "./images/thatcher.jpg", desc: "Вы — глава правительства Великобритании Маргарет Тэтчер, сторонница свободного рынка. Проблемы страны вы видите в профсоюзах, поэтому решаете бороться с ними, попутно лишая тысячи людей их рабочих мест. Когда напряжение в стране нарастает, вы воюете за отдаленные острова, о которых почти никто в вашей стране не слышал." },
+        { name: "Томас Джефферсон", x: 6.0, y: -5.5, img: "./images/jefferson.jpg", desc: "Вы — президент США Томас Джефферсон, идеолог ограниченного государства! Вы уверены, что лучшее правительство — то, которое правит меньше всего. Свобода слова, светское государство, минимум налогов и децентрализация власти — основа свободного общества." },
+        { name: "Хавьер Милей", x: 9.0, y: -5.5, img: "./images/milei.jpg", desc: "Вы — президент Аргентины Хавьер Милей, анархо-капиталист с бензопилой! Вы считаете государство главным тормозом прогресса и готовы без жалости урезать госрасходы, отменять налоги и отдавать всё в руки свободного рынка. Причиной нарастающей инфляции при вашем правлении вы считаете леваков, а протесты подавляете." }
     ];
 
     const QUESTIONS = [
@@ -601,11 +629,37 @@
     let scrambleInterval = null;
     let finalMatch = null;
     let finalCoords = { x: 0, y: 0 };
+    let loadedPortraitImg = null;
+
+    function setupHiDPICanvas(canvas, cssWidth, cssHeight) {
+        const dpr = Math.max(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(cssWidth * dpr);
+        canvas.height = Math.round(cssHeight * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        return ctx;
+    }
+
+    function snapCoord(v) {
+        return Math.round(v) + 0.5;
+    }
+
+    function getLastName(fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        return parts[parts.length - 1] || fullName;
+    }
 
     function initMarquee() {
+        document.getElementById("start-meta-text").innerText =
+            `ТЕСТ · ${QUESTIONS.length} ВОПРОСОВ · ${POLITICIANS.length} ПОЛИТИКОВ`;
+
         const container = document.getElementById("marquee-container");
-        const row1Pols = POLITICIANS.slice(0, 8);
-        const row2Pols = POLITICIANS.slice(8, 16);
+        container.innerHTML = "";
+        const mid = Math.ceil(POLITICIANS.length / 2);
+        const row1Pols = POLITICIANS.slice(0, mid);
+        const row2Pols = POLITICIANS.slice(mid);
 
         const buildRow = (list, direction) => {
             const row = document.createElement("div");
@@ -781,51 +835,73 @@
         document.getElementById("quiz-screen").classList.add("hidden");
         document.getElementById("result-screen").classList.remove("hidden");
 
-        document.getElementById("res-img").src = bestMatch.img;
+        const imgEl = document.getElementById("res-img");
+        imgEl.src = bestMatch.img;
         document.getElementById("res-name").innerText = bestMatch.name;
         document.getElementById("res-coords").innerText = `Экономика: ${userX > 0 ? '+' + userX : userX} · Власть: ${userY > 0 ? '+' + userY : userY}`;
         document.getElementById("res-desc").innerText = bestMatch.desc;
 
         drawDarkCompass(userX, userY, bestMatch);
+
+        loadedPortraitImg = null;
+        const portraitLoader = new Image();
+        portraitLoader.onload = () => {
+            loadedPortraitImg = portraitLoader;
+            drawSharePosterCard(userX, userY, bestMatch, loadedPortraitImg);
+        };
+        portraitLoader.onerror = () => {
+            drawSharePosterCard(userX, userY, bestMatch, null);
+        };
+        portraitLoader.src = bestMatch.img;
+
+        drawSharePosterCard(userX, userY, bestMatch, null);
     }
 
     function drawDarkCompass(userX, userY, politician) {
         const canvas = document.getElementById("compassCanvas");
-        const ctx = canvas.getContext("2d");
-        const size = canvas.width;
+        const size = 290;
+        const ctx = setupHiDPICanvas(canvas, size, size);
         const half = size / 2;
 
         ctx.clearRect(0, 0, size, size);
 
-        const bgGrad = ctx.createRadialGradient(half, half, 10, half, half, half * 1.2);
-        bgGrad.addColorStop(0, "#14181c");
-        bgGrad.addColorStop(1, "#0a0b0e");
-        ctx.fillStyle = bgGrad;
+        ctx.fillStyle = "#0e1115";
         ctx.fillRect(0, 0, size, size);
 
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
         ctx.lineWidth = 1;
         const step = size / 10;
         for (let i = 1; i < 10; i++) {
-            ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
+            const pos = snapCoord(i * step);
+            ctx.beginPath();
+            ctx.moveTo(pos, 0);
+            ctx.lineTo(pos, size);
+            ctx.moveTo(0, pos);
+            ctx.lineTo(size, pos);
+            ctx.stroke();
         }
 
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+        const axisMid = snapCoord(half);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(half, 18); ctx.lineTo(half, size - 18);
-        ctx.moveTo(18, half); ctx.lineTo(size - 18, half);
+        ctx.moveTo(axisMid, 20);
+        ctx.lineTo(axisMid, size - 20);
+        ctx.moveTo(20, axisMid);
+        ctx.lineTo(size - 20, axisMid);
         ctx.stroke();
 
-        ctx.fillStyle = "#8e8e98";
-        ctx.font = "10px monospace";
+        ctx.fillStyle = "#c4c4cf";
+        ctx.font = "700 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textBaseline = "alphabetic";
         ctx.textAlign = "center";
         ctx.fillText("АВТОРИТАРИЗМ", half, 13);
-        ctx.fillText("СВОБОДА", half, size - 6);
+        ctx.fillText("СВОБОДА", half, size - 5);
 
-        ctx.textAlign = "left"; ctx.fillText("ЛЕВЫЕ", 8, half - 6);
-        ctx.textAlign = "right"; ctx.fillText("ПРАВЫЕ", size - 8, half - 6);
+        ctx.textAlign = "left";
+        ctx.fillText("ЛЕВЫЕ", 8, half - 6);
+        ctx.textAlign = "right";
+        ctx.fillText("ПРАВЫЕ", size - 8, half - 6);
 
         const toPxX = (x) => half + (x / 10) * (half - 24);
         const toPxY = (y) => half - (y / 10) * (half - 24);
@@ -835,35 +911,313 @@
         const pPxX = toPxX(politician.x);
         const pPxY = toPxY(politician.y);
 
-        ctx.setLineDash([3, 3]);
-        ctx.strokeStyle = "rgba(46, 242, 216, 0.45)";
-        ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(uPxX, uPxY); ctx.lineTo(pPxX, pPxY); ctx.stroke();
-        ctx.setLineDash([]);
+        for (const pol of POLITICIANS) {
+            if (pol.name === politician.name) continue;
+            const px = toPxX(pol.x);
+            const py = toPxY(pol.y);
 
-        ctx.beginPath(); ctx.arc(pPxX, pPxY, 4.5, 0, Math.PI * 2);
-        ctx.fillStyle = "#f5b82e"; ctx.fill();
+            ctx.beginPath();
+            ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+            ctx.fillStyle = "#f5b82e";
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "#0e1115";
+            ctx.stroke();
+        }
 
+        ctx.save();
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = "rgba(46, 242, 216, 0.65)";
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(uPxX, uPxY);
+        ctx.lineTo(pPxX, pPxY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(pPxX, pPxY, 5, 0, Math.PI * 2);
         ctx.fillStyle = "#f5b82e";
-        ctx.font = "bold 10px monospace";
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#0e1115";
+        ctx.stroke();
+
+        const shortName = getLastName(politician.name);
+        ctx.font = "700 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = pPxX > half ? "right" : "left";
-        const shortName = politician.name.split(" ").slice(1).join(" ") || politician.name;
-        ctx.fillText(shortName, pPxX + (pPxX > half ? -7 : 7), pPxY + (pPxY < 26 ? 12 : -4));
+        const pLabelX = pPxX + (pPxX > half ? -8 : 8);
+        const pLabelY = pPxY < 28 ? pPxY + 13 : pPxY - 5;
+        drawCrispBadgeLabel(ctx, shortName, pLabelX, pLabelY, "#f5b82e", "#0e1115");
 
-        const glow = ctx.createRadialGradient(uPxX, uPxY, 2, uPxX, uPxY, 18);
-        glow.addColorStop(0, "rgba(46, 242, 216, 0.9)");
-        glow.addColorStop(1, "rgba(46, 242, 216, 0)");
-        ctx.fillStyle = glow;
-        ctx.beginPath(); ctx.arc(uPxX, uPxY, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(uPxX, uPxY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#2ef2d8";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
 
-        ctx.beginPath(); ctx.arc(uPxX, uPxY, 6, 0, Math.PI * 2);
-        ctx.fillStyle = "#2ef2d8"; ctx.fill();
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 11px monospace";
+        ctx.font = "800 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = uPxX > half ? "right" : "left";
-        ctx.fillText("вы", uPxX + (uPxX > half ? -10 : 10), uPxY + 4);
+        const uLabelX = uPxX + (uPxX > half ? -10 : 10);
+        const uLabelY = uPxY + 4;
+        drawCrispBadgeLabel(ctx, "ВЫ", uLabelX, uLabelY, "#ffffff", "#0e1115");
+    }
+
+    function drawCrispBadgeLabel(ctx, text, x, y, textColor, strokeColor) {
+        ctx.save();
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = strokeColor;
+        ctx.strokeText(text, x, y);
+        ctx.fillStyle = textColor;
+        ctx.fillText(text, x, y);
+        ctx.restore();
+    }
+
+    function drawSharePosterCard(userX, userY, politician, portraitImg) {
+        const canvas = document.getElementById("shareCardCanvas");
+        const w = 800;
+        const h = 1000;
+        const ctx = setupHiDPICanvas(canvas, w, h);
+
+        const posterRed = "#f4220a";
+        const posterCream = "#e5dfd3";
+        const posterInk = "#141212";
+        const gridLineColor = "rgba(229, 223, 211, 0.65)";
+
+        ctx.fillStyle = posterRed;
+        ctx.fillRect(0, 0, w, h);
+
+        const cols = 10;
+        const rows = 10;
+        const cellW = w / cols;
+        const cellH = h / rows;
+
+        ctx.strokeStyle = gridLineColor;
+        ctx.lineWidth = 1.5;
+        for (let c = 1; c < cols; c++) {
+            const gx = snapCoord(c * cellW);
+            ctx.beginPath();
+            ctx.moveTo(gx, 0);
+            ctx.lineTo(gx, h);
+            ctx.stroke();
+        }
+        for (let r = 1; r < rows; r++) {
+            const gy = snapCoord(r * cellH);
+            ctx.beginPath();
+            ctx.moveTo(0, gy);
+            ctx.lineTo(w, gy);
+            ctx.stroke();
+        }
+
+        ctx.font = "900 44px -apple-system, BlinkMacSystemFont, 'Arial Narrow', 'Roboto Condensed', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const line1 = "ВАШ ПОЛИТИЧЕСКИЙ";
+        const line2 = "ДВОЙНИК";
+
+        const m1 = ctx.measureText(line1);
+        const box1W = m1.width + 28;
+        const box1H = 58;
+        const box1X = (w - box1W) / 2;
+        const box1Y = 92;
+
+        ctx.fillStyle = posterInk;
+        ctx.fillRect(box1X, box1Y, box1W, box1H);
+        ctx.fillStyle = posterCream;
+        ctx.fillText(line1, w / 2, box1Y + box1H / 2 + 2);
+
+        const m2 = ctx.measureText(line2);
+        const box2W = m2.width + 28;
+        const box2H = 58;
+        const box2X = (w - box2W) / 2;
+        const box2Y = box1Y + box1H - 2;
+
+        ctx.fillStyle = posterInk;
+        ctx.fillRect(box2X, box2Y, box2W, box2H);
+        ctx.fillStyle = posterCream;
+        ctx.fillText(line2, w / 2, box2Y + box2H / 2 + 2);
+
+        const centerTop = 265;
+        const centerHeight = 440;
+        const sideMargin = 48;
+        const gap = 28;
+        const leftBoxW = 310;
+        const rightBoxW = w - sideMargin * 2 - leftBoxW - gap;
+
+        const leftBoxX = sideMargin;
+        const rightBoxX = leftBoxX + leftBoxW + gap;
+
+        ctx.fillStyle = posterInk;
+        ctx.fillRect(leftBoxX + 8, centerTop + 8, leftBoxW, centerHeight);
+        ctx.fillStyle = posterCream;
+        ctx.fillRect(leftBoxX, centerTop, leftBoxW, centerHeight);
+
+        const innerPad = 12;
+        const picX = leftBoxX + innerPad;
+        const picY = centerTop + innerPad;
+        const picW = leftBoxW - innerPad * 2;
+        const picH = centerHeight - innerPad * 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(picX, picY, picW, picH);
+        ctx.clip();
+
+        if (portraitImg && portraitImg.complete && portraitImg.naturalWidth > 0) {
+            const imgRatio = portraitImg.naturalWidth / portraitImg.naturalHeight;
+            const boxRatio = picW / picH;
+            let drawW, drawH, drawX, drawY;
+            if (imgRatio > boxRatio) {
+                drawH = picH;
+                drawW = picH * imgRatio;
+                drawX = picX - (drawW - picW) / 2;
+                drawY = picY;
+            } else {
+                drawW = picW;
+                drawH = picW / imgRatio;
+                drawX = picX;
+                drawY = picY - (drawH - picH) / 2;
+            }
+            ctx.drawImage(portraitImg, drawX, drawY, drawW, drawH);
+        } else {
+            ctx.fillStyle = "#241d1c";
+            ctx.fillRect(picX, picY, picW, picH);
+            ctx.fillStyle = posterCream;
+            ctx.font = "700 22px sans-serif";
+            ctx.fillText(getLastName(politician.name).toUpperCase(), picX + picW / 2, picY + picH / 2);
+        }
+        ctx.restore();
+
+        ctx.strokeStyle = posterInk;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(leftBoxX, centerTop, leftBoxW, centerHeight);
+
+        ctx.fillStyle = posterInk;
+        ctx.fillRect(rightBoxX + 8, centerTop + 8, rightBoxW, centerHeight);
+        ctx.fillStyle = posterCream;
+        ctx.fillRect(rightBoxX, centerTop, rightBoxW, centerHeight);
+        ctx.strokeStyle = posterInk;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(rightBoxX, centerTop, rightBoxW, centerHeight);
+
+        const gPadX = 22;
+        const gPadY = 38;
+        const gLeft = rightBoxX + gPadX;
+        const gTop = centerTop + gPadY;
+        const gWidth = rightBoxW - gPadX * 2;
+        const gHeight = centerHeight - gPadY * 2;
+        const gCenterX = gLeft + gWidth / 2;
+        const gCenterY = gTop + gHeight / 2;
+
+        ctx.fillStyle = "rgba(244, 34, 10, 0.14)";
+        ctx.fillRect(gLeft, gTop, gWidth / 2, gHeight / 2);
+        ctx.fillStyle = "rgba(20, 18, 18, 0.08)";
+        ctx.fillRect(gCenterX, gTop, gWidth / 2, gHeight / 2);
+        ctx.fillRect(gLeft, gCenterY, gWidth / 2, gHeight / 2);
+        ctx.fillStyle = "rgba(244, 34, 10, 0.07)";
+        ctx.fillRect(gCenterX, gCenterY, gWidth / 2, gHeight / 2);
+
+        ctx.strokeStyle = "rgba(20, 18, 18, 0.16)";
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 10; i++) {
+            const vx = snapCoord(gLeft + (gWidth / 10) * i);
+            const hz = snapCoord(gTop + (gHeight / 10) * i);
+            ctx.beginPath();
+            ctx.moveTo(vx, gTop);
+            ctx.lineTo(vx, gTop + gHeight);
+            ctx.moveTo(gLeft, hz);
+            ctx.lineTo(gLeft + gWidth, hz);
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = posterInk;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(snapCoord(gCenterX), gTop);
+        ctx.lineTo(snapCoord(gCenterX), gTop + gHeight);
+        ctx.moveTo(gLeft, snapCoord(gCenterY));
+        ctx.lineTo(gLeft + gWidth, snapCoord(gCenterY));
+        ctx.stroke();
+
+        ctx.fillStyle = posterInk;
+        ctx.font = "800 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("АВТОРИТАРИЗМ", gCenterX, gTop - 12);
+        ctx.fillText("СВОБОДА", gCenterX, gTop + gHeight + 20);
+
+        ctx.textAlign = "left";
+        ctx.fillText("ЛЕВЫЕ", gLeft, gCenterY - 8);
+        ctx.textAlign = "right";
+        ctx.fillText("ПРАВЫЕ", gLeft + gWidth, gCenterY - 8);
+
+        const mapX = (x) => gCenterX + (x / 10) * (gWidth / 2 - 10);
+        const mapY = (y) => gCenterY - (y / 10) * (gHeight / 2 - 10);
+
+        for (const pol of POLITICIANS) {
+            const isMatch = pol.name === politician.name;
+            const px = mapX(pol.x);
+            const py = mapY(pol.y);
+
+            ctx.beginPath();
+            ctx.arc(px, py, isMatch ? 7 : 4, 0, Math.PI * 2);
+            ctx.fillStyle = isMatch ? posterInk : "rgba(20, 18, 18, 0.45)";
+            ctx.fill();
+            if (isMatch) {
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = posterCream;
+                ctx.stroke();
+            }
+        }
+
+        const uX = mapX(userX);
+        const uY = mapY(userY);
+        const pX = mapX(politician.x);
+        const pY = mapY(politician.y);
+
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = posterRed;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(uX, uY);
+        ctx.lineTo(pX, pY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(uX, uY, 8, 0, Math.PI * 2);
+        ctx.fillStyle = posterRed;
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = posterCream;
+        ctx.stroke();
+
+        ctx.font = "900 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = uX > gCenterX ? "right" : "left";
+        drawCrispBadgeLabel(ctx, "ВЫ", uX + (uX > gCenterX ? -12 : 12), uY + 4, posterRed, posterCream);
+
+        const lastNameUpper = getLastName(politician.name).toUpperCase();
+        let surnameFontSize = 64;
+        ctx.font = `900 ${surnameFontSize}px -apple-system, BlinkMacSystemFont, 'Arial Narrow', 'Roboto Condensed', sans-serif`;
+        while (ctx.measureText(lastNameUpper).width > w - 96 && surnameFontSize > 32) {
+            surnameFontSize -= 2;
+            ctx.font = `900 ${surnameFontSize}px -apple-system, BlinkMacSystemFont, 'Arial Narrow', 'Roboto Condensed', sans-serif`;
+        }
+
+        const surnameBoxH = surnameFontSize + 24;
+        const surnameBoxW = Math.min(w - 64, ctx.measureText(lastNameUpper).width + 44);
+        const surnameBoxX = (w - surnameBoxW) / 2;
+        const surnameBoxY = h - 72 - surnameBoxH / 2;
+
+        ctx.fillStyle = posterInk;
+        ctx.fillRect(surnameBoxX, surnameBoxY, surnameBoxW, surnameBoxH);
+        ctx.fillStyle = posterCream;
+        ctx.textAlign = "center";
+        ctx.fillText(lastNameUpper, w / 2, surnameBoxY + surnameBoxH / 2 + 2);
     }
 
     function openExternalLink(url) {
@@ -891,16 +1245,16 @@
 
     function saveCompassImage() {
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        const canvas = document.getElementById("compassCanvas");
+        const canvas = document.getElementById("shareCardCanvas");
 
         canvas.toBlob(async (blob) => {
             if (!blob) return alert("Не удалось создать изображение.");
-            const file = new File([blob], "political-compass.png", { type: "image/png" });
+            const file = new File([blob], "political-twin-card.png", { type: "image/png" });
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
-                        title: 'Мои политические координаты',
+                        title: 'Ваш политический двойник',
                         text: `Мой политический двойник — ${finalMatch.name}!`,
                         files: [file]
                     });
@@ -913,7 +1267,7 @@
             const dataUrl = canvas.toDataURL("image/png");
             const link = document.createElement("a");
             link.href = dataUrl;
-            link.download = "political-compass.png";
+            link.download = "political-twin-card.png";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
