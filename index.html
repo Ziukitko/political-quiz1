@@ -598,6 +598,7 @@
 
         <div class="action-buttons">
             <button class="btn-action-primary" onclick="shareResult()">поделиться результатом</button>
+            <button class="btn-action-secondary" id="btn-copy-card" onclick="copyCardToClipboard()">скопировать карточку</button>
             <button class="btn-action-secondary" onclick="saveCompassImage()">сохранить карточку (PNG)</button>
             <button class="btn-action-secondary" onclick="openExternalLink('https://t.me/doxajournal')">Новые тесты будут тут</button>
             <button class="btn-action-secondary" onclick="restartQuiz()">пройти тест заново</button>
@@ -685,6 +686,7 @@
     let finalMatch = null;
     let finalCoords = { x: 0, y: 0 };
     let loadedPortraitImg = null;
+    let currentModalBlobUrl = null;
 
     function trackEvent(name, params = {}) {
         if (typeof gtag === "function") {
@@ -1434,15 +1436,58 @@
         tg.openTelegramLink(shareUrl);
     }
 
-    function openSaveModal(dataUrl) {
+    function openSaveModalFromBlob(blob, fallbackDataUrl) {
         const modal = document.getElementById("save-modal");
         const img = document.getElementById("save-modal-img");
-        img.src = dataUrl;
+
+        if (currentModalBlobUrl) {
+            URL.revokeObjectURL(currentModalBlobUrl);
+            currentModalBlobUrl = null;
+        }
+
+        if (blob) {
+            currentModalBlobUrl = URL.createObjectURL(blob);
+            img.src = currentModalBlobUrl;
+        } else {
+            img.src = fallbackDataUrl;
+        }
+
         modal.classList.remove("hidden");
     }
 
     function closeSaveModal() {
         document.getElementById("save-modal").classList.add("hidden");
+        if (currentModalBlobUrl) {
+            URL.revokeObjectURL(currentModalBlobUrl);
+            currentModalBlobUrl = null;
+        }
+    }
+
+    async function copyCardToClipboard() {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        const canvas = document.getElementById("shareCardCanvas");
+        const btn = document.getElementById("btn-copy-card");
+        if (!canvas) return;
+
+        try {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+            if (!blob || !navigator.clipboard || typeof ClipboardItem === "undefined") {
+                throw new Error("Clipboard image unsupported");
+            }
+            await navigator.clipboard.write([
+                new ClipboardItem({ "image/png": blob })
+            ]);
+
+            if (btn) {
+                const oldText = btn.innerText;
+                btn.innerText = "✓ скопировано! вставьте (Ctrl+V / Cmd+V)";
+                setTimeout(() => { btn.innerText = oldText; }, 2500);
+            }
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } catch (err) {
+            const dataUrl = canvas.toDataURL("image/png");
+            openSaveModalFromBlob(null, dataUrl);
+        }
     }
 
     function saveCompassImage() {
@@ -1458,15 +1503,25 @@
             return;
         }
 
-        const link = document.createElement("a");
-        link.href = dataUrl;
-        link.download = "political-twin-card.png";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
         if (typeof canvas.toBlob === "function") {
             canvas.toBlob(async (blob) => {
+                const blobUrl = blob ? URL.createObjectURL(blob) : "";
+
+                if (tg && typeof tg.downloadFile === "function" && blobUrl) {
+                    try {
+                        tg.downloadFile({
+                            url: blobUrl,
+                            file_name: "political-twin-card.png"
+                        }, (accepted) => {
+                            if (accepted && tg.HapticFeedback) {
+                                tg.HapticFeedback.notificationOccurred('success');
+                            }
+                        });
+                    } catch (e) {
+                        // Продолжаем к системному шарингу или модальному окну
+                    }
+                }
+
                 if (blob && navigator.canShare) {
                     const file = new File([blob], "political-twin-card.png", { type: "image/png" });
                     if (navigator.canShare({ files: [file] })) {
@@ -1476,18 +1531,24 @@
                                 text: `Мой политический двойник — ${finalMatch ? finalMatch.name : ""}!`,
                                 files: [file]
                             });
+                            if (blobUrl) URL.revokeObjectURL(blobUrl);
                             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                             return;
                         } catch (err) {
-                            if (err && err.name === "AbortError") return;
+                            if (err && err.name === "AbortError") {
+                                if (blobUrl) URL.revokeObjectURL(blobUrl);
+                                return;
+                            }
                         }
                     }
                 }
-                openSaveModal(dataUrl);
+
+                if (blobUrl) URL.revokeObjectURL(blobUrl);
+                openSaveModalFromBlob(blob, dataUrl);
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }, "image/png");
         } else {
-            openSaveModal(dataUrl);
+            openSaveModalFromBlob(null, dataUrl);
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         }
     }
