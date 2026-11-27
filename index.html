@@ -491,6 +491,12 @@
             display: block;
         }
 
+        .save-modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
         /* Анимации */
         @keyframes scrollLeft {
             0% { transform: translateX(0); }
@@ -609,10 +615,13 @@
     <div id="save-modal" class="hidden">
         <div class="save-modal-box">
             <p class="save-modal-hint">
-                Нажмите правой кнопкой мыши (на ПК) или удерживайте палец на карточке (на Android), чтобы сохранить PNG:
+                Удерживайте палец на карточке (на Android) или нажмите правой кнопкой мыши (на ПК), чтобы сохранить PNG, либо откройте в браузере:
             </p>
             <img id="save-modal-img" src="" alt="Карточка результата">
-            <button class="btn-action-secondary" onclick="closeSaveModal()">закрыть</button>
+            <div class="save-modal-actions">
+                <button class="btn-action-primary" onclick="openCardInExternalBrowser()">открыть в браузере</button>
+                <button class="btn-action-secondary" onclick="closeSaveModal()">закрыть</button>
+            </div>
         </div>
     </div>
 
@@ -687,6 +696,7 @@
     let finalCoords = { x: 0, y: 0 };
     let loadedPortraitImg = null;
     let currentModalBlobUrl = null;
+    let lastGeneratedDataUrl = "";
 
     function trackEvent(name, params = {}) {
         if (typeof gtag === "function") {
@@ -1436,6 +1446,16 @@
         tg.openTelegramLink(shareUrl);
     }
 
+    function openCardInExternalBrowser() {
+        if (!lastGeneratedDataUrl) return;
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        if (tg && typeof tg.openLink === "function") {
+            tg.openLink(lastGeneratedDataUrl);
+        } else {
+            window.open(lastGeneratedDataUrl, "_blank", "noopener,noreferrer");
+        }
+    }
+
     function openSaveModalFromBlob(blob, fallbackDataUrl) {
         const modal = document.getElementById("save-modal");
         const img = document.getElementById("save-modal-img");
@@ -1470,6 +1490,7 @@
         if (!canvas) return;
 
         try {
+            lastGeneratedDataUrl = canvas.toDataURL("image/png");
             const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
             if (!blob || !navigator.clipboard || typeof ClipboardItem === "undefined") {
                 throw new Error("Clipboard image unsupported");
@@ -1485,7 +1506,8 @@
             }
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } catch (err) {
-            const dataUrl = canvas.toDataURL("image/png");
+            const dataUrl = lastGeneratedDataUrl || canvas.toDataURL("image/png");
+            lastGeneratedDataUrl = dataUrl;
             openSaveModalFromBlob(null, dataUrl);
         }
     }
@@ -1498,6 +1520,7 @@
         let dataUrl = "";
         try {
             dataUrl = canvas.toDataURL("image/png");
+            lastGeneratedDataUrl = dataUrl;
         } catch (err) {
             alert("Не удалось подготовить PNG-карточку. Попробуйте сделать скриншот экрана.");
             return;
