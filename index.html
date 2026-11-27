@@ -455,11 +455,11 @@
             color: var(--accent);
         }
 
-        /* Модальное окно сохранения PNG для Telegram Desktop и Android */
+        /* Модальное окно сохранения / скриншота карточки */
         #save-modal {
             position: fixed;
             inset: 0;
-            background: rgba(10, 10, 12, 0.92);
+            background: rgba(10, 10, 12, 0.94);
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -477,8 +477,8 @@
         .save-modal-hint {
             font-size: 13px;
             color: var(--text-main);
-            margin-bottom: 10px;
-            line-height: 1.4;
+            margin-bottom: 12px;
+            line-height: 1.45;
         }
 
         #save-modal-img {
@@ -489,12 +489,6 @@
             user-select: auto;
             -webkit-touch-callout: default;
             display: block;
-        }
-
-        .save-modal-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
         }
 
         /* Анимации */
@@ -605,23 +599,20 @@
         <div class="action-buttons">
             <button class="btn-action-primary" onclick="shareResult()">поделиться результатом</button>
             <button class="btn-action-secondary" id="btn-copy-card" onclick="copyCardToClipboard()">скопировать карточку</button>
-            <button class="btn-action-secondary" onclick="saveCompassImage()">сохранить карточку (PNG)</button>
+            <button class="btn-action-secondary" id="btn-save-card" onclick="saveCompassImage()">сохранить карточку (PNG)</button>
             <button class="btn-action-secondary" onclick="openExternalLink('https://t.me/doxajournal')">Новые тесты будут тут</button>
             <button class="btn-action-secondary" onclick="restartQuiz()">пройти тест заново</button>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ СОХРАНЕНИЯ КАРТОЧКИ НА DESKTOP И ANDROID -->
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ СОХРАНЕНИЯ / СКРИНШОТА КАРТОЧКИ -->
     <div id="save-modal" class="hidden">
         <div class="save-modal-box">
-            <p class="save-modal-hint">
-                Удерживайте палец на карточке (на Android) или нажмите правой кнопкой мыши (на ПК), чтобы сохранить PNG, либо откройте в браузере:
+            <p class="save-modal-hint" id="save-modal-hint">
+                Нажмите правой кнопкой мыши на карточку, чтобы сохранить PNG:
             </p>
             <img id="save-modal-img" src="" alt="Карточка результата">
-            <div class="save-modal-actions">
-                <button class="btn-action-primary" onclick="openCardInExternalBrowser()">открыть в браузере</button>
-                <button class="btn-action-secondary" onclick="closeSaveModal()">закрыть</button>
-            </div>
+            <button class="btn-action-secondary" onclick="closeSaveModal()">закрыть</button>
         </div>
     </div>
 
@@ -635,6 +626,11 @@
     if (tg.setBackgroundColor) tg.setBackgroundColor('#0a0a0c');
 
     const BOT_SHARE_URL = "https://t.me/ultimate_politician_bot";
+
+    function isAndroidDevice() {
+        const platform = (tg && tg.platform) ? tg.platform.toLowerCase() : "";
+        return platform === "android" || /android/i.test(navigator.userAgent || "");
+    }
 
     const POLITICIANS = [
         { name: "Владимир Ленин", x: -9.5, y: 9.0, img: "./images/lenin.jpg", desc: "Вы — Владимир Ленин! Вы поддерживаете идею радикального переустройства общества через устранение классовых различий. Но для начала придется действовать жестко..." },
@@ -696,7 +692,6 @@
     let finalCoords = { x: 0, y: 0 };
     let loadedPortraitImg = null;
     let currentModalBlobUrl = null;
-    let lastGeneratedDataUrl = "";
 
     function trackEvent(name, params = {}) {
         if (typeof gtag === "function") {
@@ -723,6 +718,15 @@
         if (fullName === "Марин Ле Пен") return "Ле Пен";
         const parts = fullName.trim().split(/\s+/);
         return parts[parts.length - 1] || fullName;
+    }
+
+    function initPlatformUI() {
+        if (isAndroidDevice()) {
+            const copyBtn = document.getElementById("btn-copy-card");
+            const saveBtn = document.getElementById("btn-save-card");
+            if (copyBtn) copyBtn.classList.add("hidden");
+            if (saveBtn) saveBtn.innerText = "открыть карточку для скриншота";
+        }
     }
 
     function initMarquee() {
@@ -1446,19 +1450,16 @@
         tg.openTelegramLink(shareUrl);
     }
 
-    function openCardInExternalBrowser() {
-        if (!lastGeneratedDataUrl) return;
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-        if (tg && typeof tg.openLink === "function") {
-            tg.openLink(lastGeneratedDataUrl);
-        } else {
-            window.open(lastGeneratedDataUrl, "_blank", "noopener,noreferrer");
-        }
-    }
-
     function openSaveModalFromBlob(blob, fallbackDataUrl) {
         const modal = document.getElementById("save-modal");
         const img = document.getElementById("save-modal-img");
+        const hint = document.getElementById("save-modal-hint");
+
+        if (hint) {
+            hint.innerText = isAndroidDevice()
+                ? "На Android Telegram не даёт скачивать PNG напрямую — просто сделай скриншот экрана и обрежь по рамке карточки:"
+                : "Нажмите правой кнопкой мыши на карточку, чтобы сохранить PNG:";
+        }
 
         if (currentModalBlobUrl) {
             URL.revokeObjectURL(currentModalBlobUrl);
@@ -1489,8 +1490,13 @@
         const btn = document.getElementById("btn-copy-card");
         if (!canvas) return;
 
+        if (isAndroidDevice()) {
+            const dataUrl = canvas.toDataURL("image/png");
+            openSaveModalFromBlob(null, dataUrl);
+            return;
+        }
+
         try {
-            lastGeneratedDataUrl = canvas.toDataURL("image/png");
             const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
             if (!blob || !navigator.clipboard || typeof ClipboardItem === "undefined") {
                 throw new Error("Clipboard image unsupported");
@@ -1506,8 +1512,7 @@
             }
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } catch (err) {
-            const dataUrl = lastGeneratedDataUrl || canvas.toDataURL("image/png");
-            lastGeneratedDataUrl = dataUrl;
+            const dataUrl = canvas.toDataURL("image/png");
             openSaveModalFromBlob(null, dataUrl);
         }
     }
@@ -1520,9 +1525,14 @@
         let dataUrl = "";
         try {
             dataUrl = canvas.toDataURL("image/png");
-            lastGeneratedDataUrl = dataUrl;
         } catch (err) {
             alert("Не удалось подготовить PNG-карточку. Попробуйте сделать скриншот экрана.");
+            return;
+        }
+
+        if (isAndroidDevice()) {
+            openSaveModalFromBlob(null, dataUrl);
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             return;
         }
 
@@ -1584,6 +1594,7 @@
         document.getElementById("start-screen").classList.remove("hidden");
     }
 
+    initPlatformUI();
     initMarquee();
     initProgressBar();
 </script>
